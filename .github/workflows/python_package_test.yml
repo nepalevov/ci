@@ -113,7 +113,8 @@ jobs:
         continue-on-error: ${{ inputs.bypass-checks || inputs.code-checks-bypassed }}
         shell: bash
         run: |
-          pip install "twine~=6.0"
+          source .venv/bin/activate # We expect venv to be created by python_prepare action
+          pip install "twine~=6.0"  # Used only as a linter for package(s) description
           make build
           twine check dist/*
           make test PYTHON=${{ matrix.python-version }}
