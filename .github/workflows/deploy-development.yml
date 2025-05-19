@@ -12,7 +12,7 @@ on:
         description: 'The branch or tag to run the pipeline on.'
         type: string
       environment-name:
-        required: true
+        default: 'development'
         description: 'The GitHub environment name to use for the deployment.'
         type: string
     secrets:
