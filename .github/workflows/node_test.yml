@@ -1,0 +1,123 @@
+name: NodeJS tests
+
+on:
+  workflow_call:
+    inputs:
+      bypass-checks:
+        type: boolean
+        default: false
+        description: Do not fail pipeline if checks failed
+      format-checks-enabled:
+        type: boolean
+        default: true
+        description: Enable format_checks
+      format-checks-bypassed:
+        type: boolean
+        default: false
+        description: Do not fail pipeline if format_checks failed
+      style-checks-enabled:
+        type: boolean
+        default: true
+        description: Enable style_checks
+      style-checks-bypassed:
+        type: boolean
+        default: false
+        description: Do not fail pipeline if style_checks failed
+      code-checks-enabled:
+        type: boolean
+        default: true
+        description: Enable code_checks
+      code-checks-bypassed:
+        type: boolean
+        default: false
+        description: Do not fail pipeline if code_checks failed
+      ort-enabled:
+        type: boolean
+        default: true
+        description: Enable ORT scanning
+      ort-bypassed:
+        type: boolean
+        default: false
+        description: Do not fail pipeline if ORT scan failed
+      ort-version:
+        type: string
+        default: "latest"
+        description: ORT version to use
+      node-version:
+        type: string
+        default: "22"
+        description: NodeJS version to use
+      runs-on:
+        type: string
+        description: "Overrides jobs runs-on settings (json-encoded list)"
+        default: '["ubuntu-24.04"]'
+        required: false
+
+jobs:
+  format_checks:
+    if: ${{ inputs.format-checks-enabled }}
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          lfs: true
+      - uses: nepalevov/ci/actions/node_prepare@main
+        with:
+          node-version: ${{ inputs.node-version }}
+          clean-install: true
+      - name: Test
+        continue-on-error: ${{ inputs.bypass-checks || inputs.format-checks-bypassed }}
+        shell: bash
+        run: |
+          npm run format
+
+  style_checks:
+    if: ${{ inputs.style-checks-enabled }}
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          lfs: true
+      - uses: nepalevov/ci/actions/node_prepare@main
+        with:
+          node-version: ${{ inputs.node-version }}
+          clean-install: true
+      - name: Test
+        continue-on-error: ${{ inputs.bypass-checks || inputs.style-checks-bypassed }}
+        shell: bash
+        run: |
+          npm run lint
+
+  code_checks:
+    if: ${{ inputs.code-checks-enabled }}
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          lfs: true
+      - uses: nepalevov/ci/actions/node_prepare@main
+        with:
+          node-version: ${{ inputs.node-version }}
+          clean-install: true
+      - name: Test
+        continue-on-error: ${{ inputs.bypass-checks || inputs.code-checks-bypassed }}
+        shell: bash
+        run: |
+          npm run test
+
+  ort:
+    if: ${{ inputs.ort-enabled }}
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          lfs: true
+      - uses: oss-review-toolkit/ort-ci-github-action@9acdf1e56f1b42972b12274ae56c35bf70a5f65b # v1.0.1
+        env:
+          CONTINUE_ON_ERROR: ${{ inputs.bypass-checks || inputs.ort-bypassed }} # Hack to use the input below as a boolean
+        with:
+          image: "ghcr.io/oss-review-toolkit/ort:${{ inputs.ort-version }}"
+          allow-dynamic-versions: "true"
+          fail-on: "violations"
+          ort-cli-args: "-P ort.forceOverwrite=true --stacktrace -P ort.analyzer.enabledPackageManagers=NPM"
+        continue-on-error: ${{ fromJSON(env.CONTINUE_ON_ERROR) }}
