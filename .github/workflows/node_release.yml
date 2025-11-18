@@ -93,11 +93,6 @@ on:
         type: string
         default: "Dockerfile"
         description: "Path to the Dockerfile (default: ./Dockerfile)"
-      debug_enabled:
-        type: boolean
-        description: 'Run the build with tmate debugging enabled'
-        required: false
-        default: false
 
 env:
   IMAGE_NAME: ${{ github.repository }}
@@ -139,12 +134,6 @@ jobs:
       - calculate_version
       - test
     steps:
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@c0afd6f790e3a5564914980036ebf83216678101 # v3.23
-        if: ${{ inputs.debug_enabled }}
-        with:
-          connect-timeout-seconds: 3600
-          limit-access-to-actor: true
       - name: Maximize build space
         uses: nepalevov/maximize-build-space@a1a975ceb44dddb1023067778f5c0111825ade6c # v1.0.1
         if: ${{ inputs.maximize-build-space }}
@@ -211,29 +200,29 @@ jobs:
             ${{ github.ref == 'refs/heads/development' && format('{0}/{1}:{2}', 'ghcr.io', env.IMAGE_NAME, 'development') || ''}}
             ${{ startsWith(github.ref, 'refs/heads/release-') && needs.calculate_version.outputs.is-latest == 'true' && format('{0}:{1}', env.IMAGE_NAME, 'latest') || ''}}
             ${{ startsWith(github.ref, 'refs/heads/release-') && needs.calculate_version.outputs.is-latest == 'true' && format('{0}/{1}:{2}', 'ghcr.io', env.IMAGE_NAME, 'latest') || ''}}
-      # - name: Publish packages to npmjs
-      #   if: ${{ inputs.publish-enabled }}
-      #   shell: bash
-      #   run: |
-      #     #!/bin/bash
-      #     npm run build
-      #     PUBLISH_COMMAND="npm run publish"
-      #     ARGS=""
-      #     if [ "$IS_DEVELOPMENT_BRANCH" == "true" ]; then
-      #       ARGS+=" --development"
-      #     fi
-      #     if [ "$IS_RELEASE_BRANCH" == "true" ] && [ "$IS_LATEST" == "true" ]; then
-      #       ARGS+=" --tag latest"
-      #     fi
-      #     if [ -n "$ARGS" ]; then
-      #       PUBLISH_COMMAND+=" --"$ARGS
-      #     fi
-      #     $PUBLISH_COMMAND
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      #     IS_LATEST: ${{ needs.calculate_version.outputs.is-latest == 'true' }}
-      #     IS_DEVELOPMENT_BRANCH: ${{ github.ref == 'refs/heads/development' }}
-      #     IS_RELEASE_BRANCH: ${{ startsWith(github.ref, 'refs/heads/release-') }}
+      - name: Publish packages to npmjs
+        if: ${{ inputs.publish-enabled }}
+        shell: bash
+        run: |
+          #!/bin/bash
+          npm run build
+          PUBLISH_COMMAND="npm run publish"
+          ARGS=""
+          if [ "$IS_DEVELOPMENT_BRANCH" == "true" ]; then
+            ARGS+=" --development"
+          fi
+          if [ "$IS_RELEASE_BRANCH" == "true" ] && [ "$IS_LATEST" == "true" ]; then
+            ARGS+=" --tag latest"
+          fi
+          if [ -n "$ARGS" ]; then
+            PUBLISH_COMMAND+=" --"$ARGS
+          fi
+          $PUBLISH_COMMAND
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          IS_LATEST: ${{ needs.calculate_version.outputs.is-latest == 'true' }}
+          IS_DEVELOPMENT_BRANCH: ${{ github.ref == 'refs/heads/development' }}
+          IS_RELEASE_BRANCH: ${{ startsWith(github.ref, 'refs/heads/release-') }}
       - uses: nepalevov/ci/actions/publish_tag_release@main
         with:
           tag-version: ${{ needs.calculate_version.outputs.next-version }}
