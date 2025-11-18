@@ -26,8 +26,16 @@ jobs:
           if [[ "$DISPATCHED_REPO_OWNER" != "$GITHUB_REPOSITORY_OWNER" ]]; then
           ERROR_MESSAGE="The event was not dispatched by a repository within the same owner."
           fi
-          if [[ "$DISPATCHED_REPO_NAME" != ai-dial* ]]; then
-          ERROR_MESSAGE+=" The repository name does not start with 'ai-dial'."
+          WHITELIST='${{ vars.DISPATCH_WHITELIST || '["ai-dial*"]' }}'
+          MATCHED=false
+          for pattern in $(echo "$WHITELIST" | jq -r '.[]'); do
+            if [[ "$DISPATCHED_REPO_NAME" == $pattern ]]; then
+              MATCHED=true
+              break
+            fi
+          done
+          if [[ "$MATCHED" != "true" ]]; then
+            ERROR_MESSAGE+=" The repository is not allowed to dispatch."
           fi
           if [[ -n "$ERROR_MESSAGE" ]]; then
             echo "status=$ERROR_MESSAGE" >> $GITHUB_OUTPUT
