@@ -35,7 +35,7 @@ jobs:
             fi
           done
           if [[ "$MATCHED" != "true" ]]; then
-            ERROR_MESSAGE+=" The repository is not allowed to dispatch."
+            ERROR_MESSAGE+=" The event was dispatched by an unauthorized repository."
           fi
           if [[ -n "$ERROR_MESSAGE" ]]; then
             echo "status=$ERROR_MESSAGE" >> $GITHUB_OUTPUT
