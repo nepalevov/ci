@@ -131,19 +131,16 @@ jobs:
     outputs:
       test-branch: ${{ steps.set-test-branch.outputs.test-branch }}
     steps:
-      - name: Dump GitHub context # TODO: remove after debugging
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
       - name: Set test branch
         id: set-test-branch
         run: |
-          # For ai-dial-chat repo, run tests from the PR directly, for other repos use 'development' branch
-          # This is requested by QA team to verify changes in tests before rolling out for everyone
+          #!/bin/bash
+          # For ai-dial-chat repo, use PR-related branch, for other repos - default
+          # This is requested by QA team to verify changes in tests before rolling them out for everyone
           if [ ${{ github.event.client_payload.github.payload.repository.name }} == "ai-dial-chat" ]; then
             echo "test-branch=${{ github.event.client_payload.pull_request.head.ref }}" >> $GITHUB_OUTPUT
           else
-            echo "test-branch=development" >> $GITHUB_OUTPUT
+            echo "test-branch=${{ github.event.client_payload.github.payload.repository.default_branch }}" >> $GITHUB_OUTPUT
           fi
 
   e2e-test:
