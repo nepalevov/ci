@@ -1,3 +1,19 @@
+# Handles slash command to deploy pull request code to short-lived "review" environment, run
+# ai-dial-chat E2E tests against it, and report results back to the PR comment
+# ref: https://github.com/peter-evans/slash-command-dispatch
+#
+# Expected variables to be set on e.g. repository level:
+# - (optional) DISPATCH_WHITELIST: JSON array of repository names (wild) allowed to dispatch this
+# - DEPLOY_PROJECT_ID: ID of the GitLab project to trigger deployment in
+# - DEPLOY_REF: Git ref to use for deployment (e.g. main)
+# - REVIEW_BASE_DOMAIN: Base domain for review environments (e.g. example.com)
+#
+# Expected secrets to be set on e.g. repository level:
+# - ACTIONS_BOT_TOKEN: GitHub token with permissions to create/update comments
+# - DEPLOY_HOST: GitLab instance hostname (e.g. gitlab.com)
+# - DEPLOY_ACCESS_TOKEN: GitLab access token with API access to the deployment project
+# - DEPLOY_TRIGGER_TOKEN: GitLab trigger token for the deployment project
+
 name: deploy-review-command
 on:
   repository_dispatch:
@@ -8,7 +24,7 @@ jobs:
     environment:
       name: review
     steps:
-      - name: Workflow run URL
+      - name: Workflow run URL # TODO: redundant when new status query solution is implemented
         uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4.0.0
         with:
           token: ${{ secrets.ACTIONS_BOT_TOKEN }}
@@ -17,7 +33,7 @@ jobs:
           body: |
             >GitHub actions run: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
-      - name: Check repository owner
+      - name: Check dispatch repository ownership
         id: owner
         run: |
           DISPATCHED_REPO_NAME=${{ github.event.client_payload.github.payload.repository.name }}
@@ -43,7 +59,7 @@ jobs:
           fi
           echo "All checks passed."
 
-      - name: Checks and transformations
+      - name: Check all required values are present in the dispatch payload
         id: vars
         run: |
           ERROR_MESSAGE=""
