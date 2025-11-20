@@ -13,6 +13,11 @@
 # - DEPLOY_HOST: GitLab instance hostname (e.g. gitlab.com)
 # - DEPLOY_ACCESS_TOKEN: GitLab access token with API access to the deployment project
 # - DEPLOY_TRIGGER_TOKEN: GitLab trigger token for the deployment project
+# - E2E_ADMIN: A name of an application user with admin privileges
+# - E2E_USERNAME: Name(s) of application user(s) for ai-dial-chat tests
+# - E2E_OVERLAY_USERNAME: Name(s) of application user(s) for ai-dial-chat (overlay) tests
+# - E2E_PASSWORD: Password for the application users
+# - NEXT_PUBLIC_OVERLAY_USER_BUCKET: A blob storage prefix for specific application user
 
 name: deploy-review-command
 on:
