@@ -16,6 +16,7 @@ module.exports = async ({ github, context, core, inputs }) => {
   );
 
   let lastBody = null;
+  let preservedContent = '';
   try {
     const { data: existingComment } = await github.rest.issues.getComment({
       owner: commentOwner,
@@ -23,6 +24,12 @@ module.exports = async ({ github, context, core, inputs }) => {
       comment_id: commentId,
     });
     lastBody = existingComment.body;
+    if (lastBody) {
+      const lines = lastBody.split('\n');
+      if (lines.length > 0 && lines[0].trim().startsWith('/')) {
+        preservedContent = lines[0] + '\n\n';
+      }
+    }
   } catch (error) {
     console.warn('Unable to load existing comment, proceeding without baseline.', error);
   }
@@ -67,7 +74,8 @@ module.exports = async ({ github, context, core, inputs }) => {
         return deployJob.html_url || '';
       })();
 
-      let body = `>GitHub actions run: [${runId}](${run.html_url})\n\n`;
+      let body = preservedContent;
+      body += `>GitHub actions run: [${runId}](${run.html_url})\n\n`;
       body += `| Stage                        | Status         |\n`;
       body += `| ---------------------------- | -------------- |\n`;
       body += `| Environment                  | ${formatLink(environmentStatus, environmentLinkTarget)} |\n`;
