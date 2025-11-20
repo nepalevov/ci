@@ -1,10 +1,10 @@
 module.exports = async ({ github, context, core, inputs }) => {
   const { owner, repo } = context.repo;
   const runId = context.runId;
-  const commentId = inputs.comment_id;
-  const commentOwner = inputs.comment_owner || owner;
-  const commentRepo = inputs.comment_repo || repo;
-  const environmentUrl = inputs.environment_url;
+  const commentId = inputs.commentId;
+  const commentOwner = inputs.commentOwner || owner;
+  const commentRepo = inputs.commentRepo || repo;
+  const environmentUrl = inputs.environmentUrl;
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const startTime = Date.now();
