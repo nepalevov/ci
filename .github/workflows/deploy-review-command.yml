@@ -29,7 +29,7 @@ jobs:
     environment:
       name: review
     steps:
-      - name: Workflow run URL # TODO: redundant when new status query solution is implemented
+      - name: Post workflow run URL link
         uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4.0.0
         with:
           token: ${{ secrets.ACTIONS_BOT_TOKEN }}
@@ -104,48 +104,6 @@ jobs:
               "GITHUB_TRIGGER": "${{ github.event.client_payload.github.payload.comment.html_url }}"
             }
 
-      - name: Check status
-        id: status
-        if: success() || failure()
-        run: |
-          GITHUB_WORKFLOW_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
-          GITLAB_PIPELINE_URL=${{ steps.deploy.outputs.web_url }}
-
-          MESSAGE=""
-          if [[ -n "${{ steps.owner.outputs.status }}" ]]; then
-            MESSAGE+=">- **Owner check failed**: ${{ steps.owner.outputs.status }}\n"
-          fi
-          if [[ -n "${{ steps.vars.outputs.status }}" ]]; then
-            MESSAGE+=">- **Vars check failed**: ${{ steps.vars.outputs.status }}\n"
-          fi
-          if [[ -n "${{ steps.deploy.outputs.status }}" && "${{ steps.deploy.outputs.status }}" != "success" ]]; then
-            MESSAGE+=">- **Deployment failed**: [${{ steps.deploy.outputs.status }}](${GITLAB_PIPELINE_URL})\n"
-          fi
-          if [[ -z "${{ steps.owner.outputs.status }}" && -z "${{ steps.vars.outputs.status }}" && -z "${{ steps.deploy.outputs.status }}" ]]; then
-            MESSAGE+=">Something went wrong, check [GitHub Workflow run output](${GITHUB_WORKFLOW_URL})\n"
-          fi
-          echo -e "message=$MESSAGE" >> $GITHUB_OUTPUT
-
-      - name: Environment URL
-        if: success()
-        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4.0.0
-        with:
-          token: ${{ secrets.ACTIONS_BOT_TOKEN }}
-          repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
-          comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
-          body: |
-            >Environment URL: [review-environment](https://chat-${{ github.event.client_payload.slash_command.args.named.application }}-pr-${{ github.event.client_payload.pull_request.number }}.${{ vars.REVIEW_BASE_DOMAIN }}) | [pipeline](${{ steps.deploy.outputs.web_url }})
-
-      - name: Return status
-        if: success() || failure()
-        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4.0.0
-        with:
-          token: ${{ secrets.ACTIONS_BOT_TOKEN }}
-          repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
-          comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
-          body: |
-            ${{ steps.status.outputs.message }}
-
   set-test-branch:
     runs-on: ubuntu-latest
     if: ${{ !(contains(github.event.client_payload.github.payload.issue.labels.*.name, 'skip-e2e') || contains(github.event.client_payload.slash_command.args.unnamed.all, 'skip-e2e')) }}
@@ -183,16 +141,15 @@ jobs:
       E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
       NEXT_PUBLIC_OVERLAY_USER_BUCKET: ${{ secrets.NEXT_PUBLIC_OVERLAY_USER_BUCKET }}
 
-  e2e-status:
+  monitor:
     runs-on: ubuntu-latest
-    needs: e2e-test
-    if: ${{ !cancelled() && needs.e2e-test.result != 'skipped' }}
     steps:
-      - uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4.0.0
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: ./actions/monitor_status
         with:
-          token: ${{ secrets.ACTIONS_BOT_TOKEN }}
-          repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
-          comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
-          body: |
-            >Chat E2E tests status: [${{ needs.e2e-test.outputs.chat-status }}](${{ needs.e2e-test.outputs.chat-job-url }})
-            >Overlay E2E tests status: [${{ needs.e2e-test.outputs.overlay-status }}](${{ needs.e2e-test.outputs.overlay-job-url }})
+          comment_id: ${{ github.event.client_payload.github.payload.comment.id }}
+          comment_owner: ${{ github.event.client_payload.github.payload.repository.owner.login }}
+          comment_repo: ${{ github.event.client_payload.github.payload.repository.name }}
+          environment_url: "https://chat-${{ github.event.client_payload.slash_command.args.named.application }}-pr-${{ github.event.client_payload.pull_request.number }}.${{ vars.REVIEW_BASE_DOMAIN }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACTIONS_BOT_TOKEN }}
