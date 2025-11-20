@@ -12,7 +12,7 @@ module.exports = async ({ github, context, core, inputs }) => {
   const currentJobName = process.env.GITHUB_JOB;
 
   console.log(
-    `Starting monitor for Run ID: ${runId}, Comment ID: ${commentId}, Comment Repo: ${commentOwner}/${commentRepo}`
+    `Starting monitor for Run ID: ${runId}, Comment ID: ${commentId}, Comment Repository: ${commentOwner}/${commentRepo}`
   );
 
   let lastBody = null;
@@ -49,52 +49,68 @@ module.exports = async ({ github, context, core, inputs }) => {
   const formatLink = (text, url) =>
     url ? `[${text}](${url})` : text;
 
+  const updateStatus = async (run, jobs) => {
+    const deployJob = pickJob(jobs, (j) => j.name && j.name.toLowerCase().includes('deploy'));
+    const e2eChatJob = pickJob(
+      jobs,
+      (j) => j.name && j.name.toLowerCase().includes('chat') && !j.name.toLowerCase().includes('overlay')
+    );
+    const e2eOverlayJob = pickJob(
+      jobs,
+      (j) => j.name && j.name.toLowerCase().includes('overlay')
+    );
+
+    const environmentStatus = formatStatus(deployJob);
+    const environmentLinkTarget = (() => {
+      if (!deployJob) return '';
+      if (deployJob.conclusion === 'success') {
+        return environmentUrl || '';
+      }
+      return deployJob.html_url || '';
+    })();
+
+    let body = preservedContent;
+    body += `>GitHub actions run: [${runId}](${run.html_url})\n\n`;
+    body += `| Stage                        | Status         |\n`;
+    body += `| ---------------------------- | -------------- |\n`;
+    body += `| Environment                  | ${formatLink(environmentStatus, environmentLinkTarget)} |\n`;
+    body += `| Tests ai-dial-chat           | ${formatLink(formatStatus(e2eChatJob), e2eChatJob?.html_url || '')} |\n`;
+    body += `| Tests ai-dial-chat (overlay) | ${formatLink(formatStatus(e2eOverlayJob), e2eOverlayJob?.html_url || '')} |\n`;
+
+    if (body !== lastBody) {
+      await github.rest.issues.updateComment({
+        owner: commentOwner,
+        repo: commentRepo,
+        comment_id: commentId,
+        body,
+      });
+      lastBody = body;
+    }
+  };
+
   while (Date.now() - startTime < TIMEOUT) {
     try {
       const { data: run } = await github.rest.actions.getWorkflowRun({ owner, repo, run_id: runId });
       const { data: jobsResponse } = await github.rest.actions.listJobsForWorkflowRun({ owner, repo, run_id: runId });
       const jobs = jobsResponse.jobs || [];
 
-      const deployJob = pickJob(jobs, (j) => j.name && j.name.toLowerCase().includes('deploy'));
-      const e2eChatJob = pickJob(
-        jobs,
-        (j) => j.name && j.name.toLowerCase().includes('chat') && !j.name.toLowerCase().includes('overlay')
-      );
-      const e2eOverlayJob = pickJob(
-        jobs,
-        (j) => j.name && j.name.toLowerCase().includes('overlay')
-      );
-
-      const environmentStatus = formatStatus(deployJob);
-      const environmentLinkTarget = (() => {
-        if (!deployJob) return '';
-        if (deployJob.conclusion === 'success') {
-          return environmentUrl || '';
-        }
-        return deployJob.html_url || '';
-      })();
-
-      let body = preservedContent;
-      body += `>GitHub actions run: [${runId}](${run.html_url})\n\n`;
-      body += `| Stage                        | Status         |\n`;
-      body += `| ---------------------------- | -------------- |\n`;
-      body += `| Environment                  | ${formatLink(environmentStatus, environmentLinkTarget)} |\n`;
-      body += `| Tests ai-dial-chat           | ${formatLink(formatStatus(e2eChatJob), e2eChatJob?.html_url || '')} |\n`;
-      body += `| Tests ai-dial-chat (overlay) | ${formatLink(formatStatus(e2eOverlayJob), e2eOverlayJob?.html_url || '')} |\n`;
-
-      if (body !== lastBody) {
-        await github.rest.issues.updateComment({
-          owner: commentOwner,
-          repo: commentRepo,
-          comment_id: commentId,
-          body,
-        });
-        lastBody = body;
-      }
+      await updateStatus(run, jobs);
 
       const otherJobs = jobs.filter((job) => job.name !== currentJobName);
       if (otherJobs.length > 0 && otherJobs.every((job) => job.status === 'completed')) {
-        console.log('All other jobs completed. Exiting monitor.');
+        console.log('All other jobs completed. Waiting for final state consistency...');
+        await delay(10000); // Wait for GitHub to propagate 'skipped' states
+
+        // Fetch one last time
+        const { data: finalRun } = await github.rest.actions.getWorkflowRun({ owner, repo, run_id: runId });
+        const { data: finalJobsResponse } = await github.rest.actions.listJobsForWorkflowRun({
+          owner,
+          repo,
+          run_id: runId,
+        });
+        await updateStatus(finalRun, finalJobsResponse.jobs || []);
+
+        console.log('Final update completed. Exiting monitor.');
         break;
       }
     } catch (error) {
