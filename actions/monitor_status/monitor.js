@@ -15,6 +15,18 @@ module.exports = async ({ github, context, core, inputs }) => {
     `Starting monitor for Run ID: ${runId}, Comment ID: ${commentId}, Comment Repo: ${commentOwner}/${commentRepo}`
   );
 
+  let lastBody = null;
+  try {
+    const { data: existingComment } = await github.rest.issues.getComment({
+      owner: commentOwner,
+      repo: commentRepo,
+      comment_id: commentId,
+    });
+    lastBody = existingComment.body;
+  } catch (error) {
+    console.warn('Unable to load existing comment, proceeding without baseline.', error);
+  }
+
   const formatStatus = (job) => {
     if (!job) return 'Pending ⏳';
     if (job.status === 'queued') return 'Queued ⏳';
@@ -26,9 +38,9 @@ module.exports = async ({ github, context, core, inputs }) => {
     return job.status;
   };
 
-  const jobLink = (job) => (job ? `[Link](${job.html_url})` : '');
-
   const pickJob = (jobs, predicate) => jobs.find(predicate);
+  const formatLink = (text, url) =>
+    url ? `[${text}](${url})` : text;
 
   while (Date.now() - startTime < TIMEOUT) {
     try {
@@ -36,26 +48,41 @@ module.exports = async ({ github, context, core, inputs }) => {
       const { data: jobsResponse } = await github.rest.actions.listJobsForWorkflowRun({ owner, repo, run_id: runId });
       const jobs = jobsResponse.jobs || [];
 
-      const deployJob = pickJob(jobs, (j) => j.name === 'deploy-review');
-      const e2eChatJob = pickJob(jobs, (j) => j.name && j.name.toLowerCase().includes('chat'));
-      const e2eOverlayJob = pickJob(jobs, (j) => j.name && j.name.toLowerCase().includes('overlay'));
+      const deployJob = pickJob(jobs, (j) => j.name && j.name.toLowerCase().includes('deploy'));
+      const e2eChatJob = pickJob(
+        jobs,
+        (j) => j.name && j.name.toLowerCase().includes('chat') && !j.name.toLowerCase().includes('overlay')
+      );
+      const e2eOverlayJob = pickJob(
+        jobs,
+        (j) => j.name && j.name.toLowerCase().includes('overlay')
+      );
+
+      const environmentStatus = formatStatus(deployJob);
+      const environmentLinkTarget = (() => {
+        if (!deployJob) return '';
+        if (deployJob.conclusion === 'success') {
+          return environmentUrl || '';
+        }
+        return deployJob.html_url || '';
+      })();
 
       let body = `>GitHub actions run: [${runId}](${run.html_url})\n\n`;
-      if (environmentUrl) {
-        body += `>Environment URL: [link](${environmentUrl})\n\n`;
+      body += `| Stage                        | Status         |\n`;
+      body += `| ---------------------------- | -------------- |\n`;
+      body += `| Environment                  | ${formatLink(environmentStatus, environmentLinkTarget)} |\n`;
+      body += `| Tests ai-dial-chat           | ${formatLink(formatStatus(e2eChatJob), e2eChatJob?.html_url || '')} |\n`;
+      body += `| Tests ai-dial-chat (overlay) | ${formatLink(formatStatus(e2eOverlayJob), e2eOverlayJob?.html_url || '')} |\n`;
+
+      if (body !== lastBody) {
+        await github.rest.issues.updateComment({
+          owner: commentOwner,
+          repo: commentRepo,
+          comment_id: commentId,
+          body,
+        });
+        lastBody = body;
       }
-
-      body += `| Stage | Status | Details |\n|---|---|---|\n`;
-      body += `| Deploy | ${formatStatus(deployJob)} | ${jobLink(deployJob)} |\n`;
-      body += `| E2E Chat | ${formatStatus(e2eChatJob)} | ${jobLink(e2eChatJob)} |\n`;
-      body += `| E2E Overlay | ${formatStatus(e2eOverlayJob)} | ${jobLink(e2eOverlayJob)} |\n`;
-
-      await github.rest.issues.updateComment({
-        owner: commentOwner,
-        repo: commentRepo,
-        comment_id: commentId,
-        body,
-      });
 
       const otherJobs = jobs.filter((job) => job.name !== currentJobName);
       if (otherJobs.length > 0 && otherJobs.every((job) => job.status === 'completed')) {
