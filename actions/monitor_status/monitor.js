@@ -62,6 +62,7 @@ module.exports = async ({ github, context, core, inputs }) => {
     const rows = [];
 
     const sortedJobs = (jobs || [])
+      .filter((job) => job.name !== currentJobName)
       .map((job) => ({ ...job, displayName: job?.name?.trim() || '(Unnamed job)' }))
       .sort((a, b) => {
         const diff = jobTimestamp(a) - jobTimestamp(b);
@@ -69,27 +70,18 @@ module.exports = async ({ github, context, core, inputs }) => {
         return a.displayName.localeCompare(b.displayName);
       });
 
-    const deployJobs = sortedJobs.filter((job) => job.displayName.toLowerCase().includes('deploy'));
-    const successfulDeploy = deployJobs.find((job) => job.conclusion === 'success');
-    const representativeDeploy = deployJobs[0];
-    const envStatusSource = representativeDeploy || (deployJobs.length === 0 ? run : null);
-    const envStatus = formatStatus(envStatusSource || run);
-    let envLink = '';
-    if (successfulDeploy && environmentUrl) {
-      envLink = environmentUrl;
-    } else if (representativeDeploy) {
-      envLink = representativeDeploy.html_url || '';
-    } else {
-      envLink = run.html_url || '';
-    }
-
-    rows.push(`| ${formatStageCell('Environment', envLink)} | ${envStatus} |`);
+    const runLinkFallback = run.html_url || '';
 
     if (sortedJobs.length === 0) {
       rows.push(`| ${formatStageCell('Jobs not started yet')} | Pending ⏳ |`);
     } else {
       sortedJobs.forEach((job) => {
-        rows.push(`| ${formatStageCell(job.displayName)} | ${formatLink(formatStatus(job), job.html_url || '')} |`);
+        const stageLink =
+          job.displayName.toLowerCase().includes('deploy') && job.conclusion === 'success' && environmentUrl
+            ? environmentUrl
+            : undefined;
+        const statusLink = job.html_url || runLinkFallback;
+        rows.push(`| ${formatStageCell(job.displayName, stageLink)} | ${formatLink(formatStatus(job), statusLink)} |`);
       });
     }
 
@@ -130,6 +122,6 @@ module.exports = async ({ github, context, core, inputs }) => {
       console.error('Error in monitor loop:', error);
     }
 
-    await delay(10000);
+    await delay(15000);
   }
 };
