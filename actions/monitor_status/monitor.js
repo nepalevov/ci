@@ -31,7 +31,7 @@ module.exports = async ({ github, context, core, inputs }) => {
       }
     }
   } catch (error) {
-    console.warn('Unable to load existing comment, proceeding without baseline.', error);
+    console.warn('Unable to load existing comment data to append to, will overwrite', error);
   }
 
   const formatStatus = (job) => {
@@ -45,9 +45,61 @@ module.exports = async ({ github, context, core, inputs }) => {
     return job.status;
   };
 
-  const pickJob = (jobs, predicate) => jobs.find(predicate);
   const formatLink = (text, url) =>
     url ? `[${text}](${url})` : text;
+
+  const jobTimestamp = (job) => {
+    const timestamp = job?.started_at || job?.created_at || job?.completed_at;
+    return timestamp ? Date.parse(timestamp) : Number.MAX_SAFE_INTEGER;
+  };
+
+  const formatStageCell = (label, link) => {
+    const safeLabel = label || '(Unnamed job)';
+    return link ? `[${safeLabel}](${link})` : safeLabel;
+  };
+
+  const buildTable = (run, jobs) => {
+    const rows = [];
+
+    const sortedJobs = (jobs || [])
+      .map((job) => ({ ...job, displayName: job?.name?.trim() || '(Unnamed job)' }))
+      .sort((a, b) => {
+        const diff = jobTimestamp(a) - jobTimestamp(b);
+        if (diff !== 0) return diff;
+        return a.displayName.localeCompare(b.displayName);
+      });
+
+    const deployJobs = sortedJobs.filter((job) => job.displayName.toLowerCase().includes('deploy'));
+    const successfulDeploy = deployJobs.find((job) => job.conclusion === 'success');
+    const representativeDeploy = deployJobs[0];
+    const envStatusSource = representativeDeploy || (deployJobs.length === 0 ? run : null);
+    const envStatus = formatStatus(envStatusSource || run);
+    let envLink = '';
+    if (successfulDeploy && environmentUrl) {
+      envLink = environmentUrl;
+    } else if (representativeDeploy) {
+      envLink = representativeDeploy.html_url || '';
+    } else {
+      envLink = run.html_url || '';
+    }
+
+    rows.push(`| ${formatStageCell('Environment', envLink)} | ${envStatus} |`);
+
+    if (sortedJobs.length === 0) {
+      rows.push(`| ${formatStageCell('Jobs not started yet')} | Pending ⏳ |`);
+    } else {
+      sortedJobs.forEach((job) => {
+        rows.push(`| ${formatStageCell(job.displayName)} | ${formatLink(formatStatus(job), job.html_url || '')} |`);
+      });
+    }
+
+    return [
+      '| Stage                        | Status         |',
+      '| ---------------------------- | -------------- |',
+      ...rows,
+      '',
+    ].join('\n');
+  };
 
   while (Date.now() - startTime < TIMEOUT) {
     try {
@@ -55,32 +107,9 @@ module.exports = async ({ github, context, core, inputs }) => {
       const { data: jobsResponse } = await github.rest.actions.listJobsForWorkflowRun({ owner, repo, run_id: runId });
       const jobs = jobsResponse.jobs || [];
 
-      const deployJob = pickJob(jobs, (j) => j.name && j.name.toLowerCase().includes('deploy'));
-      const e2eChatJob = pickJob(
-        jobs,
-        (j) => j.name && j.name.toLowerCase().includes('chat') && !j.name.toLowerCase().includes('overlay')
-      );
-      const e2eOverlayJob = pickJob(
-        jobs,
-        (j) => j.name && j.name.toLowerCase().includes('overlay')
-      );
-
-      const environmentStatus = formatStatus(deployJob);
-      const environmentLinkTarget = (() => {
-        if (!deployJob) return '';
-        if (deployJob.conclusion === 'success') {
-          return environmentUrl || '';
-        }
-        return deployJob.html_url || '';
-      })();
-
       let body = preservedContent;
       body += `>GitHub actions run: [${runId}](${run.html_url})\n\n`;
-      body += `| Stage                        | Status         |\n`;
-      body += `| ---------------------------- | -------------- |\n`;
-      body += `| Environment                  | ${formatLink(environmentStatus, environmentLinkTarget)} |\n`;
-      body += `| Tests ai-dial-chat           | ${formatLink(formatStatus(e2eChatJob), e2eChatJob?.html_url || '')} |\n`;
-      body += `| Tests ai-dial-chat (overlay) | ${formatLink(formatStatus(e2eOverlayJob), e2eOverlayJob?.html_url || '')} |\n`;
+      body += buildTable(run, jobs);
 
       if (body !== lastBody) {
         await github.rest.issues.updateComment({
