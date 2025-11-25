@@ -73,7 +73,7 @@ concurrency:
 
 jobs:
   e2e-tests:
-    name: ${{ matrix.target }} tests
+    name: ${{ matrix.target }}
     runs-on: ubuntu-latest
     environment:
       name: ${{ inputs.environment-name }}
