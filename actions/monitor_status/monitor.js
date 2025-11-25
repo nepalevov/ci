@@ -114,30 +114,23 @@ module.exports = async ({ github, context, core, inputs }) => {
         lastBody = body;
       }
 
-      const otherJobs = jobs.filter((job) => job.name !== currentJobName);
-      if (otherJobs.length > 0 && otherJobs.every((job) => job.status === 'completed')) {
-        console.log('All other jobs completed. Exiting monitor.');
+      const otherJobs = jobs.filter((job) => job.name !== currentJobName); // Exclude current (monitoring) job, designed to die last
+      const incompleteJobs = otherJobs.filter((job) => job.status !== 'completed');
+      if (otherJobs.length > 0 && incompleteJobs.length === 0) {
+        console.log('All other jobs completed. Exiting monitor');
         break;
-      }
-      else {
-        // Mention job names left and theirs statuses
+      } else {
         console.log(
           'Jobs still in progress:',
-          otherJobs
-            .filter((job) => job.status !== 'completed')
-            .map((job) => `${job.name} (${formatStatus(job)})`)
-            .join(', ')
+          incompleteJobs.map((job) => `${job.name} (${formatStatus(job)})`).join(', ')
         );
       }
     } catch (error) {
       console.error('Error in monitor loop:', error);
     }
-    // Mention time elapsed and time left until timeout
-    const elapsed = Date.now() - startTime;
-    const timeLeft = TIMEOUT - elapsed;
-    console.log(
-      `Time elapsed: ${(elapsed / 1000 / 60).toFixed(2)} minutes, time left: ${(timeLeft / 1000 / 60).toFixed(2)} minutes`
-    );
+    const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+    const remainingSeconds = Math.max(0, Math.floor(TIMEOUT / 1000) - elapsedSeconds);
+    console.log(`Time elapsed: ${elapsedSeconds}s, time left: ${remainingSeconds}s before timeout`);
     await delay(CYCLE_INTERVAL);
   }
 };
