@@ -121,7 +121,7 @@ module.exports = async ({ github, context, core, inputs }) => {
         break;
       } else {
         console.log(
-          'Jobs still in progress:',
+          'Incomplete jobs:',
           incompleteJobs.map((job) => `${job.name} (${formatStatus(job)})`).join(', ')
         );
       }
