@@ -119,10 +119,25 @@ module.exports = async ({ github, context, core, inputs }) => {
         console.log('All other jobs completed. Exiting monitor.');
         break;
       }
+      else {
+        // Mention job names left and theirs statuses
+        console.log(
+          'Jobs still in progress:',
+          otherJobs
+            .filter((job) => job.status !== 'completed')
+            .map((job) => `${job.name} (${formatStatus(job)})`)
+            .join(', ')
+        );
+      }
     } catch (error) {
       console.error('Error in monitor loop:', error);
     }
-
+    // Mention time elapsed and time left until timeout
+    const elapsed = Date.now() - startTime;
+    const timeLeft = TIMEOUT - elapsed;
+    console.log(
+      `Time elapsed: ${(elapsed / 1000 / 60).toFixed(2)} minutes, time left: ${(timeLeft / 1000 / 60).toFixed(2)} minutes`
+    );
     await delay(CYCLE_INTERVAL);
   }
 };
