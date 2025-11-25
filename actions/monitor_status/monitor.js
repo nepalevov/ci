@@ -9,6 +9,7 @@ module.exports = async ({ github, context, core, inputs }) => {
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const startTime = Date.now();
   const TIMEOUT = 60 * 60 * 1000; // 60 minutes
+  const timeoutSeconds = Math.floor(TIMEOUT / 1000);
   const CYCLE_INTERVAL = 30 * 1000; // 30 seconds
   const currentJobName = process.env.GITHUB_JOB;
 
@@ -57,6 +58,21 @@ module.exports = async ({ github, context, core, inputs }) => {
   const formatStageCell = (label, link) => {
     const safeLabel = label || '(Unnamed job)';
     return link ? `[${safeLabel}](${link})` : safeLabel;
+  };
+
+  const formatDuration = (totalSeconds) => {
+    const seconds = Math.max(0, Math.floor(totalSeconds));
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h${String(minutes).padStart(2, '0')}m${String(secs).padStart(2, '0')}s`;
+    }
+    if (minutes > 0) {
+      return `${minutes}m${String(secs).padStart(2, '0')}s`;
+    }
+    return `${secs}s`;
   };
 
   const buildTable = (run, jobs) => {
@@ -129,8 +145,10 @@ module.exports = async ({ github, context, core, inputs }) => {
       console.error('Error in monitor loop:', error);
     }
     const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-    const remainingSeconds = Math.max(0, Math.floor(TIMEOUT / 1000) - elapsedSeconds);
-    console.log(`Time elapsed: ${elapsedSeconds}s, time left: ${remainingSeconds}s before timeout`);
+    const remainingSeconds = Math.max(0, timeoutSeconds - elapsedSeconds);
+    console.log(
+      `Elapsed ${formatDuration(elapsedSeconds)} (remaining ${formatDuration(remainingSeconds)} of ${formatDuration(timeoutSeconds)})`
+    );
     await delay(CYCLE_INTERVAL);
   }
 };
