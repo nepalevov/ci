@@ -1,4 +1,4 @@
-name: "Monitor Status"
+name: "Monitor"
 description: "Periodically updates PR comment with workflow status"
 inputs:
   comment-id:

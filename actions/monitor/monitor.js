@@ -130,7 +130,7 @@ module.exports = async ({ github, context, core, inputs }) => {
         lastBody = body;
       }
 
-      const otherJobs = jobs.filter((job) => job.name !== currentJobName); // Exclude current (monitoring) job, designed to die last
+      const otherJobs = jobs.filter((job) => job.name !== currentJobName); // Exclude current (monitor) job, designed to die last
       const incompleteJobs = otherJobs.filter((job) => job.status !== 'completed');
       if (otherJobs.length > 0 && incompleteJobs.length === 0) {
         console.log('All other jobs completed. Exiting monitor');
