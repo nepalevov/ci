@@ -130,7 +130,7 @@ jobs:
           E2E_HOST: ${{ inputs.e2e-host }}
           NEXT_PUBLIC_OVERLAY_HOST: ${{ inputs.next-public-overlay-host }}
       - name: Run tests
-        run: make -j test
+        run: make test
         shell: bash
         env:
           # TODO: deal with ai-dial-chat tests specific variables
