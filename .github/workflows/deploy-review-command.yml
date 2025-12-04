@@ -106,7 +106,7 @@ jobs:
           ref: ${{ github.event.client_payload.github.payload.repository.default_branch }}
           persist-credentials: false
       - run: tree # TODO: remove after debugging
-      - uses: ./actions/test.yml
+      - uses: ./.github/actions/test
         if: ${{ !(contains(github.event.client_payload.github.payload.issue.labels.*.name, 'skip-e2e') || contains(github.event.client_payload.slash_command.args.unnamed.all, 'skip-e2e')) }}
         with:
           debug-enabled: true
