@@ -20,9 +20,15 @@
 # - NEXT_PUBLIC_OVERLAY_USER_BUCKET: A blob storage prefix for specific application user
 
 name: deploy-review-command
+
 on:
   repository_dispatch:
     types: [deploy-review-command]
+
+concurrency:
+  group: ${{ github.event.client_payload.slash_command.args.named.application }}-pr-${{ github.event.client_payload.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   deploy-review:
     runs-on: ubuntu-latest
