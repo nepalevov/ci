@@ -113,10 +113,11 @@ jobs:
           repository: ${{ github.event.client_payload.pull_request.head.repo.full_name }}
           ref: ${{ github.event.client_payload.github.payload.repository.default_branch }}
           persist-credentials: false
-      - uses: ./.github/actions/test
+      - run: tree -a
+      - uses: ./.github/workflows/test.yml
         if: ${{ !(contains(github.event.client_payload.github.payload.issue.labels.*.name, 'skip-e2e') || contains(github.event.client_payload.slash_command.args.unnamed.all, 'skip-e2e')) }}
         with:
-          debug-enabled: true
+          debug_enabled: true
           # report-prefix: "${{ github.event.client_payload.slash_command.args.named.application }}-pr-${{ github.event.client_payload.pull_request.number }}"
           # e2e-host: "https://chat-${{ github.event.client_payload.slash_command.args.named.application }}-pr-${{ github.event.client_payload.pull_request.number }}.${{ vars.REVIEW_BASE_DOMAIN }}"
           # next-public-overlay-host: "https://overlay-${{ github.event.client_payload.slash_command.args.named.application }}-pr-${{ github.event.client_payload.pull_request.number }}.${{ vars.REVIEW_BASE_DOMAIN }}"
