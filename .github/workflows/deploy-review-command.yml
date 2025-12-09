@@ -94,6 +94,10 @@ jobs:
             exit 1
           fi
           echo "All required values are present."
+      - name: Dump the client payload context # TODO: remove after debugging
+        env:
+          PAYLOAD_CONTEXT: ${{ toJson(github.event.client_payload.slash_command.args) }}
+        run: echo "$PAYLOAD_CONTEXT"
       - name: Deploy environment
         id: deploy
         uses: digital-blueprint/gitlab-pipeline-trigger-action@20e77989b24af658ba138a0aa5291bdc657f1505 # v1.3.0
