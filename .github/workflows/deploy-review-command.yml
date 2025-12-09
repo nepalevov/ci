@@ -47,6 +47,8 @@ jobs:
     environment:
       name: review
     timeout-minutes: 30
+    outputs:
+      test-applications: ${{ steps.test-applications.outputs.json }}
     steps:
       - name: Check dispatch repository ownership
         id: owner
@@ -94,10 +96,6 @@ jobs:
             exit 1
           fi
           echo "All required values are present."
-      - name: Dump the client payload context # TODO: remove after debugging
-        env:
-          PAYLOAD_CONTEXT: ${{ toJson(github.event.client_payload.slash_command.args) }}
-        run: echo "$PAYLOAD_CONTEXT"
       - name: Deploy environment
         id: deploy
         uses: digital-blueprint/gitlab-pipeline-trigger-action@20e77989b24af658ba138a0aa5291bdc657f1505 # v1.3.0
@@ -115,6 +113,13 @@ jobs:
               "GITHUB_REF":"${{ github.event.client_payload.pull_request.head.ref }}",
               "GITHUB_TRIGGER": "${{ github.event.client_payload.github.payload.comment.html_url }}"
             }
+      - name: Define applications to be tested
+        id: test-applications
+        run: |
+          INPUT="${{ github.event.client_payload.slash_command.args.named.test-applications || 'chat' }}" # TODO: discuss default value with team
+          # Convert comma-separated string to JSON array, stripping spaces
+          JSON=$(echo "$INPUT" | jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$"; ""))')
+          echo "json=$JSON" >> $GITHUB_OUTPUT
 
   e2e-test:
     runs-on: ubuntu-latest
@@ -126,7 +131,7 @@ jobs:
       name: review
     strategy:
       matrix:
-        application: ${{ fromJson(github.event.client_payload.slash_command.args.named.test-applications || '["chat"]') }}
+        application: ${{ fromJson(needs.deploy-review.outputs.test-applications) }}
       fail-fast: false
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
