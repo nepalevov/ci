@@ -73,7 +73,6 @@ jobs:
             exit 1
           fi
           echo "All checks passed."
-
       - name: Check all required values are present in the dispatch payload
         id: vars
         run: |
@@ -95,7 +94,6 @@ jobs:
             exit 1
           fi
           echo "All required values are present."
-
       - name: Deploy environment
         id: deploy
         uses: digital-blueprint/gitlab-pipeline-trigger-action@20e77989b24af658ba138a0aa5291bdc657f1505 # v1.3.0
@@ -148,9 +146,9 @@ jobs:
         env:
           # TODO: use hack instead? https://github.com/actions/toolkit/issues/1168
           E2E_ADMIN: ${{ secrets.E2E_ADMIN }}
-          E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
           E2E_OVERLAY_USERNAME: ${{ secrets.E2E_OVERLAY_USERNAME }}
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
           NEXT_PUBLIC_OVERLAY_USER_BUCKET: ${{ secrets.NEXT_PUBLIC_OVERLAY_USER_BUCKET }}
 
   monitor:
