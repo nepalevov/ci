@@ -6,7 +6,7 @@
 # Arguments expected in the dispatch event payload:
 # - Named:
 #   - application                         Application name to deploy (e.g. "ai-dial-chat", "ai-dial-admin", etc)
-#   - (optional) test-applications        JSON array of application names to run E2E tests for (e.g. '["chat", "overlay"]' by default)
+#   - (optional) test-applications        Comma-separated list of applications to run E2E tests against (e.g. "chat,overlay")
 # - Unnamed:
 #   - (optional) skip-e2e                 If present, E2E tests will be skipped
 #
@@ -116,7 +116,7 @@ jobs:
       - name: Define applications to be tested
         id: test-applications
         run: |
-          INPUT="${{ github.event.client_payload.slash_command.args.named.test-applications || 'chat' }}" # TODO: discuss default value with team
+          INPUT="${{ github.event.client_payload.slash_command.args.named.test-applications || 'chat' }}"
           # Convert comma-separated string to JSON array, stripping spaces
           JSON=$(echo "$INPUT" | jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$"; ""))')
           echo "json=$JSON" >> $GITHUB_OUTPUT
@@ -133,7 +133,67 @@ jobs:
       matrix:
         application: ${{ fromJson(needs.deploy-review.outputs.test-applications) }}
       fail-fast: false
+    env:
+      ENVIRONMENT_URL: "https://${{ matrix.application }}-${{ github.event.client_payload.slash_command.args.named.application }}-pr-${{ github.event.client_payload.pull_request.number }}.${{ vars.REVIEW_BASE_DOMAIN }}"
     steps:
+      - name: Wait for environment
+        run: |
+          echo "Expected environment URL ${ENVIRONMENT_URL}, waiting to be available..."
+          env_hostname=$(echo "$ENVIRONMENT_URL" | awk -F/ '{print $3}')
+
+          wait_for_dns() {
+              local domain="$1"
+              local attempt=0
+              local attempt_limit=90  # retry resolve up to 15 minutes
+              local attempt_delay=10  # 10 seconds between resolve attempts
+
+              if [ -z "$domain" ]; then
+                  echo "Specify domain name as first argument" >&2
+                  return 1
+              fi
+
+              local base_domain=$(echo "$domain" | sed -E 's/[^.]+\.(.+)/\1/')
+              echo "Query Google public DNS for $base_domain nameservers"
+              local ns_servers=$(dig +short @8.8.8.8 ns $base_domain)
+              if [ -n "$ns_servers" ]; then
+                  echo "Detected nameservers for $base_domain:"
+                  echo "$ns_servers"
+              else
+                  echo "Unable to detect nameservers for $base_domain" >&2
+                  return 1
+              fi
+
+              local ns
+              local result
+              for ns in $ns_servers
+              do
+                  while true
+                      do
+                      echo "Query $ns for $domain"
+                      result=$(dig +short @${ns} "$domain")
+                      if [ ! -z "$result" ]; then
+                          if echo "$result" | grep -Eq '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}'; then
+                              echo "$result"
+                              break
+                          fi
+                      fi
+                      attempt=$((attempt+1))
+                      if [ $attempt -le $attempt_limit ]; then
+                          sleep $attempt_delay
+                      else
+                          echo "Unable to resolve $domain" >&2
+                          return 1
+                      fi
+                  done
+              done
+          }
+
+          wait_for_dns ${env_hostname}
+
+          curl --retry 30 --retry-delay 10 --retry-all-errors --fail --insecure --no-progress-meter --location --head -o /dev/null -w "%{http_code}\n" -X GET "${ENVIRONMENT_URL}"/api/health
+        shell: bash
+        env:
+          ENVIRONMENT_URL: ${{ env.ENVIRONMENT_URL }}
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           repository: ${{ github.event.client_payload.pull_request.head.repo.full_name }}
@@ -147,13 +207,13 @@ jobs:
           cp -r .github/actions/test-${{ matrix.application }}/. .github/actions/test/
       - uses: ./.github/actions/test
         with:
-          environment-url: "https://${{ matrix.application }}-${{ github.event.client_payload.slash_command.args.named.application }}-pr-${{ github.event.client_payload.pull_request.number }}.${{ vars.REVIEW_BASE_DOMAIN }}"
-          report-prefix: "${{ github.event.client_payload.slash_command.args.named.application }}-pr-${{ github.event.client_payload.pull_request.number }}"
+          environment-url: ${{ env.ENVIRONMENT_URL }}
+          report-prefix: ${{ github.event.client_payload.slash_command.args.named.application }}-pr-${{ github.event.client_payload.pull_request.number }}
           # For ai-dial-chat repo, use PR-related branch, for other repos - unset
           # This is requested by QA team to verify changes in tests before rolling them out for everyone
           test-branch: ${{ github.event.client_payload.github.payload.repository.name == 'ai-dial-chat' && github.event.client_payload.pull_request.head.ref || '' }}
         env:
-          # TODO: use hack instead? https://github.com/actions/toolkit/issues/1168
+          # TODO: consider using hack instead? https://github.com/actions/toolkit/issues/1168
           E2E_ADMIN: ${{ secrets.E2E_ADMIN }}
           E2E_OVERLAY_USERNAME: ${{ secrets.E2E_OVERLAY_USERNAME }}
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
