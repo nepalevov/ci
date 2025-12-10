@@ -223,7 +223,7 @@ jobs:
         with:
           environment-url: ${{ env.ENVIRONMENT_URL }}
           report-prefix: ${{ github.event.client_payload.slash_command.args.named.application }}-pr-${{ github.event.client_payload.pull_request.number }}
-          # If test repo matches the PR's repo, use PR branch to test changes before merging
+          # If the request dispatched from the repository with tests, pass the PR branch, otherwise we don't care
           # This is requested by QA team to verify changes in tests before rolling them out for everyone
           test-branch: ${{ matrix.test-repository == github.event.client_payload.pull_request.head.repo.full_name && github.event.client_payload.pull_request.head.ref || '' }}
         env:
