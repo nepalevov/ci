@@ -8,16 +8,20 @@
 #   - application                         Application name to deploy (e.g. "ai-dial-chat", "ai-dial-admin", etc)
 #   - (optional) test-applications        Comma-separated list of applications to run E2E tests against, with optional test repository parameter.
 #                                         Format: application[:test-repository],application[:test-repository]
-#                                         If test repository is omitted, default repo will be used
+#                                         If test repository is omitted, epam/ai-dial-chat will be used
+#                                         Default: chat (with default test repository)
 #                                         Example: chat,admin:epam/ai-dial-admin-tests
 # - Unnamed:
 #   - (optional) skip-e2e                 If present, E2E tests will be skipped
+# - PR Labels:
+#   - (optional) skip-e2e                 If present on the PR, E2E tests will be skipped
 #
 # Recommended secrets and variables layout:
 # - Repository:
 #   - Variables:
 #     - REVIEW_BASE_DOMAIN:               Base domain for review environments (e.g. example.com)
 #     - (optional) DISPATCH_WHITELIST:    JSON array of repository names (wildcard supported) allowed to dispatch slash command events
+#                                         Default: ["ai-dial*"]
 #   - Secrets:
 #     - ACTIONS_BOT_TOKEN:                GitHub token with permissions to create/update comments
 #     - DEPLOY_HOST:                      GitLab instance hostname (e.g. gitlab.com)
@@ -120,8 +124,8 @@ jobs:
         id: test-applications
         run: |
           INPUT="${{ github.event.client_payload.slash_command.args.named.test-applications || 'chat' }}"
-          DEFAULT_REPO="nepalevov/ai-dial-chat  " # TODO: make it configurable via project variables?
-          # Parse comma-separated items, each can be "app" or "app:repo"
+          DEFAULT_REPO="epam/ai-dial-chat"
+          # Parse comma-separated items, each can be "application" or "application:repo"
           # Output: [{"application": "...", "test-repository": "..."}]
           JSON=$(echo "$INPUT" | jq -Rc --arg default "$DEFAULT_REPO" '
           split(",") | map(
@@ -227,7 +231,6 @@ jobs:
           # This is requested by QA team to verify changes in tests before rolling them out for everyone
           test-branch: ${{ matrix.test-repository == github.event.client_payload.pull_request.head.repo.full_name && github.event.client_payload.pull_request.head.ref || '' }}
         env:
-          # TODO: consider using hack instead? https://github.com/actions/toolkit/issues/1168
           E2E_ADMIN: ${{ secrets.E2E_ADMIN }}
           E2E_OVERLAY_USERNAME: ${{ secrets.E2E_OVERLAY_USERNAME }}
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
