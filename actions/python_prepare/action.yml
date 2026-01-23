@@ -29,7 +29,7 @@ runs:
       uses: actions/cache@8b402f58fbc84540c8b491a91e594a4576fec3d7 # v5.0.2
       with:
         path: ~/.local
-        key: poetry-${{ runner.os }}-${{ runner.arch }}-${{ inputs.poetry-version }}
+        key: poetry-${{ inputs.poetry-version }}-${{ runner.os }}-${{ runner.arch }}-python-${{ steps.setup-python.outputs.python-version }}
     - name: Configure cached Poetry installation
       if: ${{ fromJSON(inputs.poetry-install) && steps.cached-poetry.outputs.cache-hit == 'true' }}
       # When the cache is hit, and Poetry is restored, installation will run with default settings.
