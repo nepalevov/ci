@@ -1,0 +1,157 @@
+name: Python Docker tests
+
+on:
+  workflow_call:
+    inputs:
+      bypass-checks:
+        type: boolean
+        description: Do not fail pipeline if checks failed
+        default: false
+      style-checks-enabled:
+        type: boolean
+        description: Enable style_checks
+        default: true
+      style-checks-bypassed:
+        type: boolean
+        description: Do not fail pipeline if style_checks failed
+        default: false
+      code-checks-enabled:
+        type: boolean
+        description: Enable code_checks
+        default: true
+      code-checks-bypassed:
+        type: boolean
+        description: Do not fail pipeline if code_checks failed
+        default: false
+      ort-enabled:
+        type: boolean
+        description: Enable ORT scanning
+        default: true
+      ort-bypassed:
+        type: boolean
+        description: Do not fail pipeline if ORT scan failed
+        default: false
+      ort-version:
+        type: string
+        description: ORT version to use
+        default: "latest"
+      python-version:
+        type: string
+        description: Python version to use
+        default: "3.11"
+      poetry-version:
+        type: string
+        description: Poetry version to use
+        default: "latest"
+      runs-on:
+        type: string
+        description: "Overrides jobs runs-on settings (json-encoded list)"
+        default: '["ubuntu-24.04"]'
+      maximize-build-space:
+        type: boolean
+        description: Maximize build space by removing unwanted software
+        default: false
+
+jobs:
+  style_checks:
+    if: ${{ inputs.style-checks-enabled }}
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    steps:
+      - name: Maximize build space
+        uses: nepalevov/maximize-build-space@046c48361370e2f3fa758bd2f10c6ce29109ef62 # v1.1.0
+        if: ${{ inputs.maximize-build-space }}
+        with:
+          remove-dotnet: "true"
+          remove-android: "true"
+          remove-haskell: "true"
+          remove-codeql: "true"
+          remove-large-packages: "false" # keep libgl1-mesa-dev
+          remove-cached-tools: "true"
+          remove-swapfile: "true"
+          remove-java: "true"
+          remove-swift: "true"
+          remove-julia: "true"
+          remove-browsers: "true"
+          remove-cloud-tools: "true"
+          remove-kubernetes-tools: "true"
+          remove-powershell: "true"
+          remove-container-tools: "true"
+          remove-rust: "true"
+          remove-python: "false" # just in case
+          remove-node: "true"
+          remove-go: "true"
+          remove-ruby: "true"
+          docker-cleanup: "true"
+          set-tmpdir: "true"
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          lfs: true
+      - uses: nepalevov/ci/actions/python_prepare@main
+        with:
+          python-version: ${{ inputs.python-version }}
+          poetry-version: ${{ inputs.poetry-version }}
+      - name: Test
+        continue-on-error: ${{ inputs.bypass-checks || inputs.style-checks-bypassed }}
+        shell: bash
+        run: |
+          make lint
+
+  code_checks:
+    if: ${{ inputs.code-checks-enabled }}
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    steps:
+      - name: Maximize build space
+        uses: nepalevov/maximize-build-space@046c48361370e2f3fa758bd2f10c6ce29109ef62 # v1.1.0
+        if: ${{ inputs.maximize-build-space }}
+        with:
+          remove-dotnet: "true"
+          remove-android: "true"
+          remove-haskell: "true"
+          remove-codeql: "true"
+          remove-large-packages: "false" # keep libgl1-mesa-dev
+          remove-cached-tools: "true"
+          remove-swapfile: "true"
+          remove-java: "true"
+          remove-swift: "true"
+          remove-julia: "true"
+          remove-browsers: "true"
+          remove-cloud-tools: "true"
+          remove-kubernetes-tools: "true"
+          remove-powershell: "true"
+          remove-container-tools: "true"
+          remove-rust: "true"
+          remove-python: "false" # just in case
+          remove-node: "true"
+          remove-go: "true"
+          remove-ruby: "true"
+          docker-cleanup: "true"
+          set-tmpdir: "true"
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          lfs: true
+      - uses: nepalevov/ci/actions/python_prepare@main
+        with:
+          python-version: ${{ inputs.python-version }}
+          poetry-version: ${{ inputs.poetry-version }}
+      - name: Test
+        continue-on-error: ${{ inputs.bypass-checks || inputs.code-checks-bypassed }}
+        shell: bash
+        run: |
+          make test
+
+  ort:
+    if: ${{ inputs.ort-enabled }}
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          lfs: true
+      - uses: oss-review-toolkit/ort-ci-github-action@9acdf1e56f1b42972b12274ae56c35bf70a5f65b # v1.0.1
+        env:
+          CONTINUE_ON_ERROR: ${{ inputs.bypass-checks || inputs.ort-bypassed }} # Hack to use the input below as a boolean
+        with:
+          image: "ghcr.io/oss-review-toolkit/ort:${{ inputs.ort-version }}"
+          allow-dynamic-versions: "true"
+          fail-on: "violations"
+          ort-cli-args: "-P ort.forceOverwrite=true --stacktrace -P ort.analyzer.enabledPackageManagers=Poetry"
+        continue-on-error: ${{ fromJSON(env.CONTINUE_ON_ERROR) }}

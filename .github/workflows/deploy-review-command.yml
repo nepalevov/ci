@@ -1,0 +1,253 @@
+# Handles slash command to trigger pull request code deployment to short-lived "review" environment,
+# (optionally) fetches & runs E2E test GitHub action against the environment,
+# reports results back to the PR comment
+# ref: https://github.com/peter-evans/slash-command-dispatch
+#
+# Arguments expected in the dispatch event payload:
+# - Named:
+#   - application                             Application name to deploy (e.g. "ai-dial-chat", "ai-dial-admin", etc)
+#   - (optional) test-applications            Comma-separated list of applications to run E2E tests against, with optional test repository parameter.
+#                                             Format: application[:test-repository],application[:test-repository]
+#                                             If test repository is omitted, epam/ai-dial-chat will be used
+#                                             Default: chat (with default test repository)
+#                                             Example: chat,admin:epam/ai-dial-admin-tests
+# - Unnamed:
+#   - (optional) skip-e2e                     If present, E2E tests will be skipped
+# - PR Labels:
+#   - (optional) skip-e2e                     If present on the PR, E2E tests will be skipped
+#
+# Recommended secrets and variables layout:
+# - Repository:
+#   - Variables:
+#     - REVIEW_BASE_DOMAIN:                   Base domain for review environments (e.g. example.com)
+#     - (optional) DISPATCH_WHITELIST:        JSON array of repository names (wildcard supported) allowed to dispatch slash command events
+#                                             Default: ["ai-dial*"]
+#   - Secrets:    
+#     - ACTIONS_BOT_TOKEN:                    GitHub token with permissions to create/update comments
+#     - DEPLOY_HOST:                          GitLab instance hostname (e.g. gitlab.com)
+#     - E2E_ADMIN:                            A name of an application user with admin privileges
+#     - E2E_OVERLAY_USERNAME:                 Name(s) of application user(s) for ai-dial-chat (overlay) tests
+#     - E2E_USERNAME:                         Name(s) of application user(s) for ai-dial-chat tests
+#     - E2E_PASSWORD:                         Password for the application users
+#     - NEXT_PUBLIC_OVERLAY_USER_BUCKET:      A blob storage prefix for specific application user
+# - GitHub environment `review`:
+#   - Variables:
+#     - DEPLOY_PROJECT_ID:                    ID of the GitLab project to trigger deployment in
+#     - DEPLOY_REF:                           Git ref to use for deployment (e.g. main)
+#   - Secrets:
+#     - DEPLOY_ACCESS_TOKEN:                  GitLab access token with API access to the deployment project
+#     - DEPLOY_TRIGGER_TOKEN:                 GitLab trigger token for the deployment project
+
+name: deploy-review-command
+
+on:
+  repository_dispatch:
+    types: [deploy-review-command]
+
+concurrency:
+  group: ${{ github.event.client_payload.slash_command.args.named.application }}-pr-${{ github.event.client_payload.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-review:
+    runs-on: ubuntu-latest
+    environment:
+      name: review
+    timeout-minutes: 30
+    outputs:
+      test-applications: ${{ steps.test-applications.outputs.json }}
+    steps:
+      - name: Check dispatch repository ownership
+        id: owner
+        run: |
+          DISPATCHED_REPO_NAME=${{ github.event.client_payload.github.payload.repository.name }}
+          DISPATCHED_REPO_OWNER=${{ github.event.client_payload.github.payload.repository.owner.login }}
+          ERROR_MESSAGE=""
+          if [[ "$DISPATCHED_REPO_OWNER" != "$GITHUB_REPOSITORY_OWNER" ]]; then
+          ERROR_MESSAGE="The event was not dispatched by a repository within the same owner."
+          fi
+          WHITELIST='${{ vars.DISPATCH_WHITELIST || '["ai-dial*"]' }}'
+          MATCHED=false
+          for pattern in $(echo "$WHITELIST" | jq -r '.[]'); do
+            if [[ "$DISPATCHED_REPO_NAME" == $pattern ]]; then
+              MATCHED=true
+              break
+            fi
+          done
+          if [[ "$MATCHED" != "true" ]]; then
+            ERROR_MESSAGE+=" The event was dispatched by an unauthorized repository."
+          fi
+          if [[ -n "$ERROR_MESSAGE" ]]; then
+            echo "status=$ERROR_MESSAGE" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          echo "All checks passed."
+      - name: Check all required values are present in the dispatch payload
+        id: vars
+        run: |
+          ERROR_MESSAGE=""
+          if [[ -z "${{ github.event.client_payload.slash_command.args.named.application }}" ]]; then
+            ERROR_MESSAGE="The 'application' argument is missing."
+          fi
+          if [[ -z "${{ github.event.client_payload.pull_request.number }}" ]]; then
+            ERROR_MESSAGE+=" Pull request number is missing."
+          fi
+          if [[ -z "${{ github.event.client_payload.pull_request.head.repo.full_name }}" ]]; then
+            ERROR_MESSAGE+=" Pull request head repo full name is missing."
+          fi
+          if [[ -z "${{ github.event.client_payload.pull_request.head.ref }}" ]]; then
+            ERROR_MESSAGE+=" Pull request head ref is missing."
+          fi
+          if [[ -n "$ERROR_MESSAGE" ]]; then
+            echo "status=$ERROR_MESSAGE" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          echo "All required values are present."
+      - name: Deploy environment
+        id: deploy
+        uses: digital-blueprint/gitlab-pipeline-trigger-action@20e77989b24af658ba138a0aa5291bdc657f1505 # v1.3.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          trigger_token: ${{ secrets.DEPLOY_TRIGGER_TOKEN }}
+          access_token: ${{ secrets.DEPLOY_ACCESS_TOKEN }}
+          id: ${{ vars.DEPLOY_PROJECT_ID }}
+          ref: ${{ vars.DEPLOY_REF }}
+          variables: >
+            {
+              "GITHUB_APP":"${{ github.event.client_payload.slash_command.args.named.application }}",
+              "GITHUB_PR":"pr-${{ github.event.client_payload.pull_request.number }}",
+              "GITHUB_REPO":"${{ github.event.client_payload.pull_request.head.repo.full_name }}",
+              "GITHUB_REF":"${{ github.event.client_payload.pull_request.head.ref }}",
+              "GITHUB_TRIGGER": "${{ github.event.client_payload.github.payload.comment.html_url }}"
+            }
+      - name: Define applications to be tested
+        id: test-applications
+        run: |
+          INPUT="${{ github.event.client_payload.slash_command.args.named.test-applications || 'chat' }}"
+          DEFAULT_REPO="epam/ai-dial-chat"
+          # Parse comma-separated items, each can be "application" or "application:repo"
+          # Output: [{"application": "...", "test-repository": "..."}]
+          JSON=$(echo "$INPUT" | jq -Rc --arg default "$DEFAULT_REPO" '
+          split(",") | map(
+              gsub("^\\s+|\\s+$"; "") |
+              if contains(":") then
+              split(":") | {application: .[0], "test-repository": .[1]}
+              else
+              {application: ., "test-repository": $default}
+              end
+          ) | map(select(.application != ""))
+          ')
+          echo "json=$JSON" >> $GITHUB_OUTPUT
+
+  e2e-test:
+    name: ${{ matrix.application }}
+    runs-on: ubuntu-latest
+    if: ${{ !(contains(github.event.client_payload.github.payload.issue.labels.*.name, 'skip-e2e') || contains(github.event.client_payload.slash_command.args.unnamed.all, 'skip-e2e')) }}
+    needs:
+      - deploy-review
+    timeout-minutes: 60
+    environment:
+      name: review
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.deploy-review.outputs.test-applications) }}
+      fail-fast: false
+    env:
+      ENVIRONMENT_URL: "https://${{ matrix.application }}-${{ github.event.client_payload.slash_command.args.named.application }}-pr-${{ github.event.client_payload.pull_request.number }}.${{ vars.REVIEW_BASE_DOMAIN }}"
+    steps:
+      - name: Wait for environment
+        run: |
+          echo "Expected environment URL ${ENVIRONMENT_URL}, waiting to be available..."
+          env_hostname=$(echo "$ENVIRONMENT_URL" | awk -F/ '{print $3}')
+
+          wait_for_dns() {
+              local domain="$1"
+              local attempt=0
+              local attempt_limit=90  # retry resolve up to 15 minutes
+              local attempt_delay=10  # 10 seconds between resolve attempts
+
+              if [ -z "$domain" ]; then
+                  echo "Specify domain name as first argument" >&2
+                  return 1
+              fi
+
+              local base_domain=$(echo "$domain" | sed -E 's/[^.]+\.(.+)/\1/')
+              echo "Query Google public DNS for $base_domain nameservers"
+              local ns_servers=$(dig +short @8.8.8.8 ns $base_domain)
+              if [ -n "$ns_servers" ]; then
+                  echo "Detected nameservers for $base_domain:"
+                  echo "$ns_servers"
+              else
+                  echo "Unable to detect nameservers for $base_domain" >&2
+                  return 1
+              fi
+
+              local ns
+              local result
+              for ns in $ns_servers
+              do
+                  while true
+                      do
+                      echo "Query $ns for $domain"
+                      result=$(dig +short @${ns} "$domain")
+                      if [ ! -z "$result" ]; then
+                          if echo "$result" | grep -Eq '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}'; then
+                              echo "$result"
+                              break
+                          fi
+                      fi
+                      attempt=$((attempt+1))
+                      if [ $attempt -le $attempt_limit ]; then
+                          sleep $attempt_delay
+                      else
+                          echo "Unable to resolve $domain" >&2
+                          return 1
+                      fi
+                  done
+              done
+          }
+
+          wait_for_dns ${env_hostname}
+
+          curl --retry 30 --retry-delay 10 --retry-all-errors --fail --insecure --no-progress-meter --location --head -o /dev/null -w "%{http_code}\n" -X GET "${ENVIRONMENT_URL}"/api/health
+        shell: bash
+        env:
+          ENVIRONMENT_URL: ${{ env.ENVIRONMENT_URL }}
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: ${{ matrix.test-repository }}
+          sparse-checkout: |
+            .github/actions
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Choose proper test action
+        run: |
+          cp -r .github/actions/test-${{ matrix.application }}/. .github/actions/test/
+      - uses: ./.github/actions/test
+        with:
+          environment-url: ${{ env.ENVIRONMENT_URL }}
+          report-prefix: ${{ github.event.client_payload.slash_command.args.named.application }}-pr-${{ github.event.client_payload.pull_request.number }}
+          # If the request dispatched from the repository with tests, pass the PR branch, otherwise we don't care
+          # This is requested by QA team to verify changes in tests before rolling them out for everyone
+          test-branch: ${{ matrix.test-repository == github.event.client_payload.pull_request.head.repo.full_name && github.event.client_payload.pull_request.head.ref || '' }}
+        env:
+          E2E_ADMIN: ${{ secrets.E2E_ADMIN }}
+          E2E_OVERLAY_USERNAME: ${{ secrets.E2E_OVERLAY_USERNAME }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
+          NEXT_PUBLIC_OVERLAY_USER_BUCKET: ${{ secrets.NEXT_PUBLIC_OVERLAY_USER_BUCKET }}
+
+  monitor:
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+      - uses: ./actions/monitor
+        with:
+          comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
+          comment-owner: ${{ github.event.client_payload.github.payload.repository.owner.login }}
+          comment-repo: ${{ github.event.client_payload.github.payload.repository.name }}
+          environment-url: "https://chat-${{ github.event.client_payload.slash_command.args.named.application }}-pr-${{ github.event.client_payload.pull_request.number }}.${{ vars.REVIEW_BASE_DOMAIN }}"
+          github-token: ${{ secrets.ACTIONS_BOT_TOKEN }}

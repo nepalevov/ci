@@ -1,0 +1,82 @@
+name: Dependency Review
+
+# Designed to be triggered by `pull_request_target` event
+on:
+  workflow_call:
+    inputs:
+      java-version:
+        type: string
+        default: "17"
+        description: Java version to use
+      java-distribution:
+        type: string
+        default: "temurin"
+        description: Java distribution to use
+    secrets:
+      ACTIONS_BOT_TOKEN:
+        required: true
+
+# decrease from default read/write
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    # Do not perform dependency review on private repos - GitHub Advanced Security is not enabled
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to submit dependency graph
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        with:
+          disable-telemetry: true
+          disable-sudo-and-containers: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.deps.dev:443
+            api.securityscorecards.dev:443
+            api.github.com:443
+            github.com:443
+            *.githubusercontent.com:443
+            *.gradle.org:443
+            *.gradle.com:443
+            repo.maven.apache.org:443
+            maven.pkg.github.com:443
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          lfs: true
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: nepalevov/ci/actions/java_prepare@main
+        with:
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+          build-scan-publish: true
+      - uses: gradle/actions/dependency-submission@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        with:
+          dependency-graph: generate-and-submit # Default value is 'generate-submit-and-upload', but we do not want job artifacts
+        env:
+          GITHUB_DEPENDENCY_GRAPH_REF: "refs/heads/${{ github.event.pull_request.head.ref }}"
+          GITHUB_DEPENDENCY_GRAPH_SHA: ${{ github.event.pull_request.head.sha }}
+          GPR_USERNAME: ${{ github.actor }}
+          GPR_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      - id: dependency-review
+        uses: actions/dependency-review-action@3c4e3dcb1aa7874d2c16be7d79418e9b7efd6261 # v4.8.2
+        with:
+          retry-on-snapshot-warnings: true
+          retry-on-snapshot-warnings-timeout: 600
+      - if: ${{ steps.dependency-review.outputs.comment-content != null }}
+        name: Save dependency review output report
+        run: |
+          cat << 'EOF' > openssf-report.html
+          ${{ steps.dependency-review.outputs.comment-content }}
+          EOF
+      - if: ${{ steps.dependency-review.outputs.comment-content != null }}
+        # Use separate action to comment because the original one can't do it without PR context
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: openssf-report.html
+          edit-mode: replace
+          token: ${{ secrets.ACTIONS_BOT_TOKEN }}
