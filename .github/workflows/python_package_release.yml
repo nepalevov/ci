@@ -132,7 +132,7 @@ jobs:
         shell: bash
         run: |
           make build
-          make publish
+          # make publish
         env:
           PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
       - uses: nepalevov/ci/actions/publish_tag_release@main
