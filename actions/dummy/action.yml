@@ -8,4 +8,5 @@ runs:
         echo "This is a dummy action that does nothing."
         echo $GITHUB_ACTION_PATH
         ls -lah $GITHUB_ACTION_PATH
+        trivy convert --format template --template @${GITHUB_ACTION_PATH}/markdown.tpl --output ${GITHUB_STEP_SUMMARY} --exit-code 0 trivy-results.json
       shell: bash
