@@ -1,0 +1,8 @@
+name: "Dummy Action"
+description: "Do nothing"
+
+runs:
+  using: "composite"
+  steps:
+    - run: echo "This is a dummy action that does nothing."
+      shell: bash
