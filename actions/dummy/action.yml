@@ -4,5 +4,8 @@ description: "Do nothing"
 runs:
   using: "composite"
   steps:
-    - run: echo "This is a dummy action that does nothing."
+    - run: |
+        echo "This is a dummy action that does nothing."
+        echo $GITHUB_ACTION_PATH
+        ls -lah $GITHUB_ACTION_PATH
       shell: bash
