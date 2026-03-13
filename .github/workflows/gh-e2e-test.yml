@@ -4,57 +4,57 @@ on:
   workflow_call:
     inputs:
       e2e-host:
-        required: true
-        description: "The environment URL for end-to-end testing, e.g., https://my-app.example.com"
         type: string
+        description: The environment URL for end-to-end testing, e.g., https://my-app.example.com
+        required: true
       next-public-overlay-host:
+        type: string
+        description: An ai-dial-chat (overlay) URL
         required: true
-        description: "An ai-dial-chat (overlay) URL"
-        type: string
       test-repository:
-        description: "E2E tests Git repository"
         type: string
+        description: E2E tests Git repository
         default: "epam/ai-dial-chat"
       test-branch:
-        description: "E2E tests Git branch"
         type: string
+        description: E2E tests Git branch
         default: "development"
       dotenv-file:
-        description: "Path to dotenv file with E2E test variables"
         type: string
+        description: Path to dotenv file with E2E test variables
         default: "apps/chat-e2e/.env.ci"
       java-distribution:
-        description: "Java distribution"
         type: string
+        description: Java distribution
         default: "temurin"
       java-version:
-        description: "Java version"
         type: string
+        description: Java version
         default: "17"
       node-version:
-        description: "NodeJS version"
         type: string
+        description: NodeJS version
         default: "lts/*"
       playwright-version:
-        description: "Playwright version"
         type: string
+        description: Playwright version
         default: "latest"
       allure-version:
-        description: "Allure Report version"
         type: string
+        description: Allure Report version
         default: "2.24.0"
       report-prefix:
-        description: "Test report name prefix"
         type: string
+        description: Test report name prefix
         default: ${{ github.run_id }}
       timeout-minutes:
-        description: "The maximum number of minutes to let a job run before GitHub automatically cancels it."
         type: number
+        description: The maximum number of minutes to let a job run before GitHub automatically cancels it.
         default: 60
       environment-name:
-        default: "e2e-test"
-        description: "The GitHub environment name to use for the tests. An abstraction to conveniently store secrets and variables"
         type: string
+        description: The GitHub environment name to use for the tests. An abstraction to conveniently store secrets and variables
+        default: "e2e-test"
     secrets:
       E2E_ADMIN:
         required: true
@@ -83,7 +83,7 @@ jobs:
         target: [chat, overlay]
       fail-fast: false
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ inputs.test-repository }}
           ref: ${{ inputs.test-branch }}
@@ -98,7 +98,7 @@ jobs:
       - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
         with:
           node-version: ${{ inputs.node-version }}
-      - uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
+      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: ${{ inputs.java-distribution }}
           java-version: ${{ inputs.java-version }}

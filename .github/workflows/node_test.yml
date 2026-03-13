@@ -5,60 +5,59 @@ on:
     inputs:
       bypass-checks:
         type: boolean
-        default: false
         description: Do not fail pipeline if checks failed
+        default: false
       format-checks-enabled:
         type: boolean
-        default: true
         description: Enable format_checks
+        default: true
       format-checks-bypassed:
         type: boolean
-        default: false
         description: Do not fail pipeline if format_checks failed
+        default: false
       style-checks-enabled:
         type: boolean
-        default: true
         description: Enable style_checks
+        default: true
       style-checks-bypassed:
         type: boolean
-        default: false
         description: Do not fail pipeline if style_checks failed
+        default: false
       code-checks-enabled:
         type: boolean
-        default: true
         description: Enable code_checks
+        default: true
       code-checks-bypassed:
         type: boolean
-        default: false
         description: Do not fail pipeline if code_checks failed
+        default: false
       ort-enabled:
         type: boolean
-        default: true
         description: Enable ORT scanning
+        default: true
       ort-bypassed:
         type: boolean
-        default: false
         description: Do not fail pipeline if ORT scan failed
+        default: false
       ort-version:
         type: string
-        default: "latest"
         description: ORT version to use
+        default: "latest"
       node-version:
         type: string
-        default: "22"
         description: NodeJS version to use
+        default: "22"
       runs-on:
         type: string
-        description: "Overrides jobs runs-on settings (json-encoded list)"
+        description: Overrides jobs runs-on settings (json-encoded list)
         default: '["ubuntu-24.04"]'
-        required: false
 
 jobs:
   format_checks:
     if: ${{ inputs.format-checks-enabled }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           lfs: true
       - uses: nepalevov/ci/actions/node_prepare@main
@@ -75,7 +74,7 @@ jobs:
     if: ${{ inputs.style-checks-enabled }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           lfs: true
       - uses: nepalevov/ci/actions/node_prepare@main
@@ -92,7 +91,7 @@ jobs:
     if: ${{ inputs.code-checks-enabled }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           lfs: true
       - uses: nepalevov/ci/actions/node_prepare@main
@@ -109,7 +108,7 @@ jobs:
     if: ${{ inputs.ort-enabled }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           lfs: true
       - uses: oss-review-toolkit/ort-ci-github-action@9acdf1e56f1b42972b12274ae56c35bf70a5f65b # v1.0.1
