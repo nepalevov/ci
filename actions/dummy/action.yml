@@ -4,9 +4,14 @@ description: "Do nothing"
 runs:
   using: "composite"
   steps:
-    - run: |
-        echo "This is a dummy action that does nothing."
-        echo $GITHUB_ACTION_PATH
-        ls -lah $GITHUB_ACTION_PATH
+    - name: Generate Trivy report (Markdown)
+      if: ${{ steps.trivy.outcome == 'success' }}
+      run: |
         trivy convert --format template --template @${GITHUB_ACTION_PATH}/markdown.tpl --output ${GITHUB_STEP_SUMMARY} --exit-code 0 trivy-results.json
       shell: bash
+      env:
+        CONTINUE_ON_ERROR: ${{ inputs.bypass-checks }} # Hack to use the input below as a boolean
+        TRIVY_SCANNERS: ${{ inputs.trivy-scanners }}
+        TRIVY_SEVERITY: ${{ inputs.trivy-severity }}
+        TRIVY_DISABLE_VEX_NOTICE: true
+      continue-on-error: ${{ fromJSON(env.CONTINUE_ON_ERROR) }}
