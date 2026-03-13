@@ -208,7 +208,7 @@ jobs:
           PUBLISH_COMMAND="npm run publish"
           ARGS=""
           if [ "$IS_DEVELOPMENT_BRANCH" == "true" ]; then
-            ARGS+=" --development"
+            ARGS+=" --tag next"
           fi
           if [ "$IS_RELEASE_BRANCH" == "true" ] && [ "$IS_LATEST" == "true" ]; then
             ARGS+=" --tag latest"
