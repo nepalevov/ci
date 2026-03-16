@@ -209,9 +209,13 @@ jobs:
           ARGS=""
           if [ "$IS_DEVELOPMENT_BRANCH" == "true" ]; then
             ARGS+=" --tag next"
-          fi
-          if [ "$IS_RELEASE_BRANCH" == "true" ] && [ "$IS_LATEST" == "true" ]; then
-            ARGS+=" --tag latest"
+          elif [ "$IS_RELEASE_BRANCH" == "true" ]; then
+            if [ "$IS_LATEST" == "true" ]; then
+              ARGS+=" --tag latest"
+            else
+              MAJOR=$(echo "$NEXT_VERSION" | cut -d. -f1)
+              ARGS+=" --tag v${MAJOR}" # TODO: verify with ai-dial-chat custom script and adjust behavior
+            fi
           fi
           if [ -n "$ARGS" ]; then
             PUBLISH_COMMAND+=" --"$ARGS
@@ -222,6 +226,7 @@ jobs:
           IS_LATEST: ${{ needs.calculate_version.outputs.is-latest == 'true' }}
           IS_DEVELOPMENT_BRANCH: ${{ github.ref == 'refs/heads/development' }}
           IS_RELEASE_BRANCH: ${{ startsWith(github.ref, 'refs/heads/release-') }}
+          NEXT_VERSION: ${{ needs.calculate_version.outputs.next-version }}
       - uses: nepalevov/ci/actions/publish_tag_release@main
         with:
           tag-version: ${{ needs.calculate_version.outputs.next-version }}
