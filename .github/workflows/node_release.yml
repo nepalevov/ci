@@ -69,7 +69,7 @@ on:
         default: true
       publish-enabled:
         type: boolean
-        description: Enable publish to npmjs
+        description: Enable npm publish
         default: true
       node-version:
         type: string
@@ -179,7 +179,7 @@ jobs:
         uses: nepalevov/ci/actions/build_docker@main
         with:
           ghcr-username: ${{ github.actor }}
-          ghcr-password: ${{ secrets.ACTIONS_BOT_TOKEN }}
+          ghcr-password: ${{ secrets.GITHUB_TOKEN }}
           dockerhub-username: ${{ secrets.DOCKERHUB_LOGIN }}
           dockerhub-password: ${{ secrets.DOCKERHUB_TOKEN }}
           image-name: ghcr.io/${{ env.IMAGE_NAME }}
@@ -195,7 +195,7 @@ jobs:
           image-extra-aliases: |
             ${{ github.ref == 'refs/heads/development' && format('{0}/{1}:{2}', 'ghcr.io', env.IMAGE_NAME, 'development') || ''}}
             ${{ startsWith(github.ref, 'refs/heads/release-') && needs.calculate_version.outputs.is-latest == 'true' && format('{0}/{1}:{2}', 'ghcr.io', env.IMAGE_NAME, 'latest') || ''}}
-      - name: Publish packages to npmjs
+      - name: Publish npm package
         if: ${{ inputs.publish-enabled }}
         shell: bash
         run: |
