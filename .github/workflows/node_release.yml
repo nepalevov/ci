@@ -200,26 +200,36 @@ jobs:
         shell: bash
         run: |
           #!/bin/bash
+          # Builds and publishes the package to the npm registry.
+          # Steps:
+          # 1. (naive) check if a package with the same version is already exists in the registry
+          # 2. build the package using either `build:publishable` (useful for monorepos) or `build` script
+          # 3. publish the package using `publish` script with tags:
+          #    - development branch → `next` tag
+          #    - release branch with "latest" version → `latest` tag
+          #    - release branch with non-latest version → `branch name` tag (e.g. `release-1.0` tag for `release-1.0` branch)
+          #    - other branches → no tag (default)
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          if npm view "$PACKAGE_NAME@$PACKAGE_VERSION" &>/dev/null; then
+            echo "Version $PACKAGE_NAME@$PACKAGE_VERSION already published, skipping"; exit 0
+          fi
           if node -e "process.exit(require('./package.json').scripts?.['build:publishable'] ? 0 : 1)"; then
             npm run build:publishable
           else
             npm run build
           fi
-          PUBLISH_COMMAND="npm run publish"
-          ARGS=""
-          if [ "$IS_DEVELOPMENT_BRANCH" == "true" ]; then
-            ARGS+=" --tag next"
-          elif [ "$IS_RELEASE_BRANCH" == "true" ]; then
-            if [ "$IS_LATEST" == "true" ]; then
-              ARGS+=" --tag latest"
+          if [ "$IS_DEVELOPMENT_BRANCH" = "true" ]; then
+            npm run publish -- --tag next
+          elif [ "$IS_RELEASE_BRANCH" = "true" ]; then
+            if [ "$IS_LATEST" = "true" ]; then
+              npm run publish -- --tag latest
             else
-              ARGS+=" --tag $(echo "$GITHUB_REF" | sed 's|refs/heads/||')"
+              npm run publish -- --tag "${GITHUB_REF#refs/heads/}"
             fi
+          else
+            npm run publish
           fi
-          if [ -n "$ARGS" ]; then
-            PUBLISH_COMMAND+=" --"$ARGS
-          fi
-          $PUBLISH_COMMAND
         env:
           NODE_AUTH_TOKEN: ${{ secrets.ACTIONS_BOT_TOKEN }}
           IS_LATEST: ${{ needs.calculate_version.outputs.is-latest == 'true' }}
