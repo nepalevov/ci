@@ -173,7 +173,7 @@ jobs:
       - name: Set version
         shell: bash
         run: |
-          npm version ${{ needs.calculate_version.outputs.next-version }} --no-git-tag-version || true # upstream branch may already be updated
+          npm version ${{ needs.calculate_version.outputs.next-version }} --allow-same-version --no-git-tag-version
       # HACK: jobs.<job_id>.if does not support hashFiles function, so we have to copy it to the each step
       - if: ${{ inputs.docker-build-enabled && (hashFiles(inputs.dockerfile-path) != '') }}
         uses: nepalevov/ci/actions/build_docker@main
