@@ -1,4 +1,4 @@
-name: Python Docker tests
+name: Python Docker Tests
 
 on:
   workflow_call:
@@ -34,7 +34,7 @@ on:
       ort-version:
         type: string
         description: ORT version to use
-        default: "latest"
+        default: latest
       python-version:
         type: string
         description: Python version to use
@@ -42,7 +42,7 @@ on:
       poetry-version:
         type: string
         description: Poetry version to use
-        default: "latest"
+        default: latest
       runs-on:
         type: string
         description: Overrides jobs runs-on settings (json-encoded list)
@@ -95,7 +95,6 @@ jobs:
         shell: bash
         run: |
           make lint
-
   code_checks:
     if: ${{ inputs.code-checks-enabled }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}
@@ -137,8 +136,8 @@ jobs:
         continue-on-error: ${{ inputs.bypass-checks || inputs.code-checks-bypassed }}
         shell: bash
         run: |
+          #!/bin/bash
           make test
-
   ort:
     if: ${{ inputs.ort-enabled }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}

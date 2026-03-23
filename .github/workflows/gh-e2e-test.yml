@@ -1,4 +1,4 @@
-name: Run e2e-tests on GitHub
+name: Run E2E-Tests on GitHub
 
 on:
   workflow_call:
@@ -14,19 +14,19 @@ on:
       test-repository:
         type: string
         description: E2E tests Git repository
-        default: "epam/ai-dial-chat"
+        default: epam/ai-dial-chat
       test-branch:
         type: string
         description: E2E tests Git branch
-        default: "development"
+        default: development
       dotenv-file:
         type: string
         description: Path to dotenv file with E2E test variables
-        default: "apps/chat-e2e/.env.ci"
+        default: apps/chat-e2e/.env.ci
       java-distribution:
         type: string
         description: Java distribution
-        default: "temurin"
+        default: temurin
       java-version:
         type: string
         description: Java version
@@ -38,7 +38,7 @@ on:
       playwright-version:
         type: string
         description: Playwright version
-        default: "latest"
+        default: latest
       allure-version:
         type: string
         description: Allure Report version
@@ -46,15 +46,15 @@ on:
       report-prefix:
         type: string
         description: Test report name prefix
-        default: ${{ github.run_id }}
+        default: "${{ github.run_id }}"
       timeout-minutes:
         type: number
-        description: The maximum number of minutes to let a job run before GitHub automatically cancels it.
+        description: The maximum number of minutes to let a job run before GitHub automatically cancels it
         default: 60
       environment-name:
         type: string
         description: The GitHub environment name to use for the tests. An abstraction to conveniently store secrets and variables
-        default: "e2e-test"
+        default: e2e-test
     secrets:
       E2E_ADMIN:
         required: true
@@ -72,7 +72,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  e2e-tests:
+  e2e_tests:
     name: ${{ matrix.target }}
     runs-on: ubuntu-latest
     environment:
@@ -104,6 +104,7 @@ jobs:
           java-version: ${{ inputs.java-version }}
       - name: Install Allure CLI
         run: |
+          #!/bin/bash
           curl -fsSL --retry 5 --retry-delay 2 https://github.com/allure-framework/allure2/releases/download/${ALLURE_VERSION}/allure_${ALLURE_VERSION}-1_all.deb -o /tmp/allure.deb
           sudo dpkg -i /tmp/allure.deb
           echo "Allure CLI version: $(allure --version)"
@@ -112,11 +113,12 @@ jobs:
           ALLURE_VERSION: ${{ inputs.allure-version }}
       - name: Install Playwright
         run: |
+          #!/bin/bash
           npm install -D @playwright/test@${{ inputs.playwright-version }} allure-playwright
           npx playwright install --with-deps
           echo "Playwright version: $(npx playwright --version)"
         shell: bash
-      - name: Wait for environment
+      - name: Wait For Environment
         run: |
           #!/bin/bash
           echo "Expected environment URL ${ENVIRONMENT_URL}, waiting to be available..."
@@ -179,8 +181,9 @@ jobs:
         env:
           ENVIRONMENT_URL: ${{ inputs.e2e-host }}
           NEXT_PUBLIC_OVERLAY_HOST: ${{ inputs.next-public-overlay-host }}
-      - name: Run tests
+      - name: Run Tests
         run: |
+          #!/bin/bash
           echo "URL to run e2e tests against:                 ${E2E_HOST}"
           echo "URL to run overlay e2e tests against:         ${NEXT_PUBLIC_OVERLAY_HOST}"
           echo "Config for arithmetic e2e api tests:          ${ENTITY_ARITHMETIC_REQUEST_FOR_API_TESTS}"
@@ -200,10 +203,11 @@ jobs:
       - name: Generate Allure Report
         if: ${{ !cancelled() }}
         run: |
+          #!/bin/bash
           allure generate ./apps/chat-e2e/allure-${{ matrix.target }}-results -o ./apps/chat-e2e/allure-${{ matrix.target }}-report --clean
         shell: bash
       - name: Upload Allure Report
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: ${{ !cancelled() }}
         with:
           name: "${{ inputs.report-prefix }}-${{ matrix.target }}"

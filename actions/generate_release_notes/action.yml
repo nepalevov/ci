@@ -1,4 +1,4 @@
-name: Generate release notes
+name: Generate Release Notes
 description: Generate release notes based on conventional commits
 
 inputs:
@@ -9,7 +9,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Checkout repository
+    - name: Checkout Repository
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         fetch-depth: 0
@@ -17,8 +17,7 @@ runs:
         # doesn't actually fetch LFS files. So, we have to use lfs even we don't need it here.
         # ref: https://github.com/actions/checkout/issues/270
         lfs: true
-    - name: Generate changelog
-      id: generate_changelog
+    - name: Generate Changelog
       run: |
         #!/bin/bash
 

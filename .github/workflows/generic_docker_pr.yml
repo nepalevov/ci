@@ -1,4 +1,4 @@
-name: Generic Docker PR workflow
+name: Generic Docker PR Workflow
 
 on:
   workflow_call:
@@ -26,7 +26,7 @@ on:
       ort-version:
         type: string
         description: ORT version to use
-        default: "latest"
+        default: latest
       trivy-enabled:
         type: boolean
         description: Enable Trivy scanning
@@ -38,11 +38,11 @@ on:
       trivy-severity:
         type: string
         description: Severities of vulnerabilities to fail the build
-        default: "CRITICAL,HIGH"
+        default: CRITICAL,HIGH
       trivy-severity-for-sarif:
         type: string
         description: Severities of vulnerabilities in SARIF report
-        default: "CRITICAL,HIGH"
+        default: CRITICAL,HIGH
       trivy-limit-severities-for-sarif:
         type: boolean
         description: By default SARIF format enforces output of all vulnerabilities regardless of configured severities. To override this behavior set this parameter to true and specify desired severities in the `trivy-severity-for-sarif` parameter
@@ -58,7 +58,7 @@ on:
       platforms:
         type: string
         description: Docker build platforms
-        default: "linux/amd64"
+        default: linux/amd64
 
 env:
   IMAGE_NAME: ${{ github.repository }}
@@ -74,11 +74,10 @@ jobs:
       ort-bypassed: ${{ inputs.ort-bypassed }}
       ort-version: ${{ inputs.ort-version }}
       runs-on: ${{ inputs.runs-on }}
-
   docker_build:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
-      - name: Maximize build space
+      - name: Maximize Build Space
         uses: nepalevov/maximize-build-space@046c48361370e2f3fa758bd2f10c6ce29109ef62 # v1.1.0
         if: ${{ inputs.maximize-build-space }}
         with:

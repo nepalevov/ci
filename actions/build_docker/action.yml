@@ -1,5 +1,7 @@
-name: Build docker
+name: Build Docker
+
 description: Build a docker image, tag it, (optionally) scan it, and (optionally) push it to Dockerhub and GHCR
+
 inputs:
   bypass-checks:
     description: Do not fail pipeline if checks failed
@@ -39,7 +41,7 @@ inputs:
     default: ""
   ghcr-username:
     description: GitHub Container Registry (GHCR) username. Required for pushing to GHCR
-    default: ${{ github.actor }}
+    default: "${{ github.actor }}"
   ghcr-password:
     description: GitHub Container Registry (GHCR) password/token. Required for pushing to GHCR
     default: ""
@@ -51,7 +53,7 @@ inputs:
     default: ""
   gpr-username:
     description: GitHub Package Registry username (for pulling packages from image being built)
-    default: ${{ github.actor }}
+    default: "${{ github.actor }}"
   gpr-password:
     description: GitHub Package Registry password/token (for pulling packages from image being built)
     default: ""
@@ -65,7 +67,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Setup Docker QUEMU
+    - name: Setup Docker QEMU
       if: ${{ inputs.platforms != 'linux/amd64' }}
       uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
     - name: Setup Docker Buildx
@@ -131,6 +133,7 @@ runs:
       # Do not generate SARIF reports for pull requests from forks
       if: ${{ steps.trivy.outcome == 'success' && !github.event.repository.private && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) }}
       run: |
+        #!/bin/bash
         trivy convert --format sarif --output trivy-results.sarif --exit-code 0 trivy-results.json
       shell: bash
       env:
@@ -151,6 +154,7 @@ runs:
     - name: Generate Trivy report (Table, must fail on findings)
       if: ${{ steps.trivy.outcome == 'success' }}
       run: |
+        #!/bin/bash
         trivy convert --format table --exit-code 1 trivy-results.json
       shell: bash
       env:

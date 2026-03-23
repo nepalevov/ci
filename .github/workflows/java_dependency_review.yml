@@ -11,7 +11,7 @@ on:
       java-distribution:
         type: string
         description: Java distribution to use
-        default: "temurin"
+        default: temurin
     secrets:
       ACTIONS_BOT_TOKEN:
         required: true
@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 jobs:
-  dependency-review:
+  dependency_review:
     # Do not perform dependency review on private repos - GitHub Advanced Security is not enabled
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
@@ -67,11 +67,13 @@ jobs:
           retry-on-snapshot-warnings: true
           retry-on-snapshot-warnings-timeout: 600
       - if: ${{ steps.dependency-review.outputs.comment-content != null }}
-        name: Save dependency review output report
+        name: Save Dependency Review Output Report
         run: |
+          #!/bin/bash
           cat << 'EOF' > openssf-report.html
           ${{ steps.dependency-review.outputs.comment-content }}
           EOF
+        shell: bash
       - if: ${{ steps.dependency-review.outputs.comment-content != null }}
         # Use separate action to comment because the original one can't do it without PR context
         uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0

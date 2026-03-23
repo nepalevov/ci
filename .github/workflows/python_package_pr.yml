@@ -1,4 +1,4 @@
-name: Python Package PR workflow
+name: Python Package PR Workflow
 
 on:
   workflow_call:
@@ -38,7 +38,7 @@ on:
       ort-version:
         type: string
         description: ORT version to use
-        default: "latest"
+        default: latest
       trivy-enabled:
         type: boolean
         description: Enable Trivy scanning
@@ -50,11 +50,11 @@ on:
       trivy-severity:
         type: string
         description: Severities of vulnerabilities to fail the build
-        default: "CRITICAL,HIGH"
+        default: CRITICAL,HIGH
       trivy-severity-for-sarif:
         type: string
         description: Severities of vulnerabilities in SARIF report
-        default: "CRITICAL,HIGH"
+        default: CRITICAL,HIGH
       trivy-limit-severities-for-sarif:
         type: boolean
         description: By default SARIF format enforces output of all vulnerabilities regardless of configured severities. To override this behavior set this parameter to true and specify desired severities in the `trivy-severity-for-sarif` parameter
@@ -96,7 +96,6 @@ jobs:
       python-version: ${{ inputs.python-version }}
       poetry-version: ${{ inputs.poetry-version }}
       runs-on: ${{ inputs.runs-on }}
-
   build:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
@@ -108,3 +107,4 @@ jobs:
           python-version: ${{ inputs.python-version }}
           poetry-version: ${{ inputs.poetry-version }}
       - run: make build
+        shell: bash
