@@ -58,9 +58,9 @@ runs:
           local BRANCH_NAME="$2"
 
           # Split the version string into Major, Minor and Patch numbers
-          local MAJOR=${VERSION[0]}
-          local MINOR=${VERSION[1]}
-          local PATCH=${VERSION[2]}
+          local MAJOR=${VERSION[0]:-0}
+          local MINOR=${VERSION[1]:-0}
+          local PATCH=${VERSION[2]:-0}
 
           local PRE_RELEASE=""
 
@@ -91,7 +91,6 @@ runs:
 
         # Stable-only latest tag (ignores RC tags)
         LATEST_STABLE_TAG=$(git tag | grep -E "^[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -1 || true)
-        LATEST_STABLE_TAG=${LATEST_STABLE_TAG:-0.0.0}
 
         if [[ "${CURRENT_BRANCH}" == "development" ]]; then
           CURRENT_VERSION="${LATEST_STABLE_TAG}"
