@@ -77,7 +77,7 @@ runs:
           echo "${MAJOR}.${MINOR}.${PATCH}${PRE_RELEASE}"
         }
 
-        CURRENT_BRANCH=$(git symbolic-ref -q HEAD)
+        CURRENT_BRANCH=$(git symbolic-ref -q HEAD || true)
         CURRENT_BRANCH=${CURRENT_BRANCH##refs/heads/}
         CURRENT_BRANCH=${CURRENT_BRANCH:-HEAD}
 
@@ -150,7 +150,8 @@ runs:
           sed 's/-//g')
 
         # Outputs to stdout and job summary
-        OUTPUTS_SUMMARY=$(cat <<EOF
+        OUTPUTS_SUMMARY=$(
+          cat <<EOF
         | Parameter                    | Value                         |
         | ---------------------------- | ----------------------------- |
         | current-version              | $CURRENT_VERSION              |
