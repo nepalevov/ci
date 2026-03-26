@@ -176,7 +176,7 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
           clean-install: true
-          registry-url: "https://registry.npmjs.org"
+          registry-url: "https://npm.pkg.github.com"
       - name: Set Version
         shell: bash
         run: |
