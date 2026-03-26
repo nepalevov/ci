@@ -191,7 +191,7 @@ jobs:
           dockerhub-username: ${{ secrets.DOCKERHUB_LOGIN }}
           dockerhub-password: ${{ secrets.DOCKERHUB_TOKEN }}
           image-name: ghcr.io/${{ env.IMAGE_NAME }}
-          image-tag: ${{ needs.calculate_version.outputs.next-version }}
+          image-tag: ${{ startsWith(github.ref, 'refs/heads/release-') && needs.calculate_version.outputs.next-version || 'development' }}
           push-enabled: true
           trivy-enabled: ${{ inputs.trivy-enabled }}
           bypass-checks: ${{ inputs.trivy-bypassed }}
@@ -201,7 +201,6 @@ jobs:
           platforms: ${{ inputs.platforms }}
           dockerfile-path: ${{ inputs.dockerfile-path }}
           image-extra-aliases: |
-            ${{ github.ref == 'refs/heads/development' && format('{0}/{1}:{2}', 'ghcr.io', env.IMAGE_NAME, 'development') || ''}}
             ${{ startsWith(github.ref, 'refs/heads/release-') && needs.calculate_version.outputs.is-latest == 'true' && format('{0}/{1}:{2}', 'ghcr.io', env.IMAGE_NAME, 'latest') || ''}}
       - name: Publish Packages to Npmjs
         if: ${{ inputs.publish-enabled }}
@@ -213,7 +212,6 @@ jobs:
           # 1. (naive) check if a package with the same version is already exists in the registry
           # 2. build the package using either `build:publishable` (useful for monorepos) or `build` script
           # 3. publish the package using `publish` script with distribution tags:
-          #    - development version --> `next` distribution tag
           #    - release candidate version --> `rc` distribution tag
           #    - semantically "latest" stable version --> `latest` distribution tag
           #    - other cases --> no distribution tag (default)
@@ -227,16 +225,13 @@ jobs:
           else
             npm run build
           fi
-          if [ "$IS_DEVELOPMENT_BRANCH" = "true" ]; then
-            npm run publish -- --tag "next"
-          elif [ "$IS_RELEASE_CANDIDATE" = "true" ]; then
+          if [ "$IS_RELEASE_CANDIDATE" = "true" ]; then
             npm run publish -- --tag "rc"
           elif [ "$IS_LATEST" = "true" ]; then
             npm run publish -- --tag "latest"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.ACTIONS_BOT_TOKEN }}
-          IS_DEVELOPMENT_BRANCH: ${{ github.ref == 'refs/heads/development' }}
           IS_RELEASE_CANDIDATE: ${{ needs.calculate_version.outputs.is-release-candidate == 'true' }}
           IS_LATEST: ${{ needs.calculate_version.outputs.is-latest == 'true' }}
       - uses: nepalevov/ci/actions/publish_tag_release@main

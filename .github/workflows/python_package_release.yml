@@ -137,6 +137,7 @@ jobs:
           #!/bin/bash
           sed -i "s/^version = .*/version = \"${{ needs.calculate_version.outputs.next-version-without-hyphens }}\"/g" pyproject.toml
       - name: Publish to PyPI
+        if: startsWith(github.ref, 'refs/heads/release-')
         shell: bash
         run: |
           #!/bin/bash
