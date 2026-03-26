@@ -3,6 +3,10 @@ name: Java Release Workflow
 on:
   workflow_call:
     inputs:
+      promote:
+        type: boolean
+        description: Promote latest RC on the current release branch to stable
+        default: false
       bypass-checks:
         type: boolean
         description: Do not fail pipeline if checks failed
@@ -117,10 +121,13 @@ jobs:
     outputs:
       next-version: ${{ steps.semantic-versioning.outputs.next-version }}
       is-latest: ${{ steps.semantic-versioning.outputs.is-latest }}
-      latest-tag: ${{ steps.semantic-versioning.outputs.latest-tag }}
+      latest-stable-tag: ${{ steps.semantic-versioning.outputs.latest-stable-tag }}
+      changelog-mode: ${{ steps.semantic-versioning.outputs.changelog-mode }}
     steps:
       - uses: nepalevov/ci/actions/semantic_versioning@main
         id: semantic-versioning
+        with:
+          promote: ${{ inputs.promote }}
 
   release:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
@@ -160,7 +167,8 @@ jobs:
           set-tmpdir: "true"
       - uses: nepalevov/ci/actions/generate_release_notes@main
         with:
-          latest-tag: ${{ needs.calculate_version.outputs.latest-tag }}
+          latest-tag: ${{ needs.calculate_version.outputs.latest-stable-tag }}
+          use-merge-base: ${{ needs.calculate_version.outputs.changelog-mode == 'merge-base' }}
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           lfs: true
