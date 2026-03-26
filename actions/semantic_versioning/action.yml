@@ -90,7 +90,7 @@ runs:
         git fetch --tags
 
         # Stable-only latest tag (ignores RC tags)
-        LATEST_STABLE_TAG=$(git tag | grep -E "^[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -1)
+        LATEST_STABLE_TAG=$(git tag | grep -E "^[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -1 || true)
         LATEST_STABLE_TAG=${LATEST_STABLE_TAG:-0.0.0}
 
         if [[ "${CURRENT_BRANCH}" == "development" ]]; then
@@ -99,7 +99,7 @@ runs:
 
         elif [[ "${CURRENT_BRANCH}" =~ ^release- ]]; then
           RELEASE_LINE="${CURRENT_BRANCH##release-}" # e.g. "1.0"
-          STABLE_TAG=$(git tag | grep -E "^${RELEASE_LINE}\.[0-9]+$" | sort -V | tail -1)
+          STABLE_TAG=$(git tag | grep -E "^${RELEASE_LINE}\.[0-9]+$" | sort -V | tail -1 || true)
 
           if [[ -n "${STABLE_TAG}" ]]; then
             # Stable tag found = at least one release on this release line --> bump patch version
@@ -112,7 +112,7 @@ runs:
 
           elif [[ "${PROMOTE}" == "true" ]]; then
             # No stable tag found + promote trigger passed --> produce first stable release
-            CURRENT_VERSION=$(git tag | grep -E "^${RELEASE_LINE}\.0-rc\.[0-9]+$" | sort -V | tail -1)
+            CURRENT_VERSION=$(git tag | grep -E "^${RELEASE_LINE}\.0-rc\.[0-9]+$" | sort -V | tail -1 || true)
             NEXT_VERSION="${RELEASE_LINE}.0"
             CHANGELOG_MODE="merge-base"
             IS_RELEASE="true"
@@ -123,7 +123,7 @@ runs:
           else
             # No stable tag found, no promote trigger --> bump RC version
             IS_RELEASE_CANDIDATE="true"
-            LATEST_RC=$(git tag | grep -E "^${RELEASE_LINE}\.0-rc\.[0-9]+$" | sort -V | tail -1)
+            LATEST_RC=$(git tag | grep -E "^${RELEASE_LINE}\.0-rc\.[0-9]+$" | sort -V | tail -1 || true)
 
             if [[ -n "${LATEST_RC}" ]]; then
               RC_N=$(echo "${LATEST_RC}" | sed "s/^.*-rc\.//")
