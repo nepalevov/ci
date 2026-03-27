@@ -123,6 +123,7 @@ jobs:
       latest-stable-tag: ${{ steps.semantic-versioning.outputs.latest-stable-tag }}
       changelog-mode: ${{ steps.semantic-versioning.outputs.changelog-mode }}
       is-release-candidate: ${{ steps.semantic-versioning.outputs.is-release-candidate }}
+      release-line: ${{ steps.semantic-versioning.outputs.release-line }}
     steps:
       - uses: nepalevov/ci/actions/semantic_versioning@main
         id: semantic-versioning
@@ -214,7 +215,7 @@ jobs:
           # 3. publish the package using `publish` script with distribution tags:
           #    - release candidate version --> `rc` distribution tag
           #    - semantically "latest" stable version --> `latest` distribution tag
-          #    - other cases --> no distribution tag (default)
+          #    - other cases (non-latest stable) --> `stable-{release-line}` distribution tag (e.g. `stable-1.0`)
           PACKAGE_NAME=$(node -p "require('./package.json').name")
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
           if npm view "$PACKAGE_NAME@$PACKAGE_VERSION" &>/dev/null; then
@@ -230,12 +231,13 @@ jobs:
           elif [ "$IS_LATEST" = "true" ]; then
             npm run publish -- --tag "latest"
           else
-            npm run publish -- --tag "" # HACK: explicitly specify empty tag, otherwise npm will apply "latest"
+            npm run publish -- --tag "stable-$RELEASE_LINE"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.ACTIONS_BOT_TOKEN }}
           IS_RELEASE_CANDIDATE: ${{ needs.calculate_version.outputs.is-release-candidate == 'true' }}
           IS_LATEST: ${{ needs.calculate_version.outputs.is-latest == 'true' }}
+          RELEASE_LINE: ${{ needs.calculate_version.outputs.release-line }}
       - uses: nepalevov/ci/actions/publish_tag_release@main
         with:
           tag-version: ${{ needs.calculate_version.outputs.next-version }}
