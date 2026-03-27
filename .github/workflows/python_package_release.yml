@@ -5,7 +5,7 @@ on:
     inputs:
       promote:
         type: boolean
-        description: Promote latest RC on the current release branch to stable
+        description: Promote release to stable (for release-* branches only)
         default: false
       bypass-checks:
         type: boolean
