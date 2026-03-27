@@ -47,5 +47,4 @@ runs:
         updateOnlyUnreleased: true
         prerelease: ${{ contains(inputs.tag-version, '-') }} # will capture e.g. `-rc`
         makeLatest: ${{ contains(inputs.tag-version, '-') && 'false' || 'legacy' }} # false if it's a pre-release, otherwise let GitHub decide (based on semver)
-        draft: true
         tag: ${{ inputs.tag-version }}
