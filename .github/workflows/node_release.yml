@@ -230,7 +230,7 @@ jobs:
           elif [ "$IS_LATEST" = "true" ]; then
             npm run publish -- --tag "latest"
           else
-            npm run publish
+            npm run publish -- --tag "" # HACK: explicitly specify empty tag, otherwise npm will apply "latest"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.ACTIONS_BOT_TOKEN }}
