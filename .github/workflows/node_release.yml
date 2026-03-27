@@ -229,6 +229,8 @@ jobs:
             npm run publish -- --tag "rc"
           elif [ "$IS_LATEST" = "true" ]; then
             npm run publish -- --tag "latest"
+          else
+            npm run publish
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.ACTIONS_BOT_TOKEN }}
