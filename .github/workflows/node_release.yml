@@ -203,7 +203,7 @@ jobs:
           image-extra-aliases: |
             ${{ startsWith(github.ref, 'refs/heads/release-') && needs.calculate_version.outputs.is-latest == 'true' && format('{0}/{1}:{2}', 'ghcr.io', env.IMAGE_NAME, 'latest') || ''}}
       - name: Publish Packages to Npmjs
-        if: ${{ inputs.publish-enabled }}
+        if: ${{ inputs.publish-enabled && startsWith(github.ref, 'refs/heads/release-') }}
         shell: bash
         run: |
           #!/bin/bash
