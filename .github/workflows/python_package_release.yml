@@ -141,7 +141,6 @@ jobs:
         shell: bash
         run: |
           #!/bin/bash
-          make build
           make publish
         env:
           PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
