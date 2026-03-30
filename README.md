@@ -77,6 +77,12 @@ name: Release Workflow
 on:
   push:
     branches: [development, release-*]
+  workflow_dispatch:
+    inputs:
+      promote:
+        type: boolean
+        default: false
+        description: Promote release to stable (for release-* branches only)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -85,6 +91,8 @@ concurrency:
 jobs:
   release:
     uses: nepalevov/ci/.github/workflows/node_release.yml@main
+    with:
+      promote: ${{ github.event_name == 'workflow_dispatch' && inputs.promote }}
     secrets: inherit
 ```
 
@@ -121,6 +129,12 @@ name: Release Workflow
 on:
   push:
     branches: [development, release-*]
+  workflow_dispatch:
+    inputs:
+      promote:
+        type: boolean
+        default: false
+        description: Promote release to stable (for release-* branches only)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -129,6 +143,8 @@ concurrency:
 jobs:
   release:
     uses: nepalevov/ci/.github/workflows/java_release.yml@main
+    with:
+      promote: ${{ github.event_name == 'workflow_dispatch' && inputs.promote }}
     secrets: inherit
 ```
 
@@ -191,6 +207,12 @@ name: Release Workflow
 on:
   push:
     branches: [development, release-*]
+  workflow_dispatch:
+    inputs:
+      promote:
+        type: boolean
+        default: false
+        description: Promote release to stable (for release-* branches only)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -199,6 +221,8 @@ concurrency:
 jobs:
   release:
     uses: nepalevov/ci/.github/workflows/python_docker_release.yml@main
+    with:
+      promote: ${{ github.event_name == 'workflow_dispatch' && inputs.promote }}
     secrets: inherit
 ```
 
@@ -233,6 +257,12 @@ name: Release Workflow
 on:
   push:
     branches: [development, release-*]
+  workflow_dispatch:
+    inputs:
+      promote:
+        type: boolean
+        default: false
+        description: Promote release to stable (for release-* branches only)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -241,6 +271,8 @@ concurrency:
 jobs:
   release:
     uses: nepalevov/ci/.github/workflows/python_package_release.yml@main
+    with:
+      promote: ${{ github.event_name == 'workflow_dispatch' && inputs.promote }}
     secrets: inherit
 ```
 
@@ -277,6 +309,12 @@ name: Release Workflow
 on:
   push:
     branches: [development, release-*]
+  workflow_dispatch:
+    inputs:
+      promote:
+        type: boolean
+        default: false
+        description: Promote release to stable (for release-* branches only)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -285,6 +323,8 @@ concurrency:
 jobs:
   release:
     uses: nepalevov/ci/.github/workflows/generic_docker_release.yml@main
+    with:
+      promote: ${{ github.event_name == 'workflow_dispatch' && inputs.promote }}
     secrets: inherit
 ```
 
