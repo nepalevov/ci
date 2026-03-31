@@ -62,6 +62,7 @@ runs:
         sort --unique --output /tmp/my_commits_log{,} # Sorting commits and removing duplicates
 
         sed -i '/\[skip ci\] Update version/d' /tmp/my_commits_log # Removing '[skip ci] Update version' commits
+        sed -i '/^Merge branch/d' /tmp/my_commits_log # Removing merge commits
 
         # Creating empty files for each category.
         echo -n '' >/tmp/my_changelog_breaking_changes
@@ -131,7 +132,7 @@ runs:
         if [[ "$(wc -l </tmp/my_changelog_other)" -gt 0 ]]; then
             {
                 echo -e "## Other\n"
-                grep -v "Merge branch " /tmp/my_changelog_other # Removing merge commits
+                cat /tmp/my_changelog_other
             } >>/tmp/my_changelog
         fi
       env:
