@@ -28,18 +28,12 @@ runs:
 
         ${{ inputs.extra-commit-command }}
 
-        CURRENT_BRANCH=$(git symbolic-ref -q HEAD)
-        CURRENT_BRANCH=${CURRENT_BRANCH##refs/heads/}
-        CURRENT_BRANCH=${CURRENT_BRANCH:-HEAD}
-        if [[ "$CURRENT_BRANCH" =~ "release-" ]]; then
-          git tag -a "${{ inputs.tag-version }}" -m "$(cat ${{ inputs.changelog-file }})"
-        fi
+        git tag -a "${{ inputs.tag-version }}" -m "$(cat ${{ inputs.changelog-file }})"
 
         git push
         git push --tags
       shell: bash
     - uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b # v1.20.0
-      if: github.ref != 'refs/heads/development'
       with:
         artifacts: ${{ inputs.artifacts }}
         bodyFile: ${{ inputs.changelog-file }}

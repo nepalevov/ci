@@ -119,11 +119,12 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     outputs:
       next-version: ${{ steps.semantic-versioning.outputs.next-version }}
-      is-latest: ${{ steps.semantic-versioning.outputs.is-latest }}
       latest-stable-tag: ${{ steps.semantic-versioning.outputs.latest-stable-tag }}
-      changelog-mode: ${{ steps.semantic-versioning.outputs.changelog-mode }}
       is-release-candidate: ${{ steps.semantic-versioning.outputs.is-release-candidate }}
+      is-release: ${{ steps.semantic-versioning.outputs.is-release }}
+      is-latest: ${{ steps.semantic-versioning.outputs.is-latest }}
       release-line: ${{ steps.semantic-versioning.outputs.release-line }}
+      changelog-mode: ${{ steps.semantic-versioning.outputs.changelog-mode }}
     steps:
       - uses: nepalevov/ci/actions/semantic_versioning@main
         id: semantic-versioning
@@ -182,7 +183,7 @@ jobs:
         shell: bash
         run: |
           #!/bin/bash
-          npm version ${{ needs.calculate_version.outputs.next-version }} --no-git-tag-version || true # upstream branch may already be updated
+          npm version ${{ needs.calculate_version.outputs.next-version }} --no-git-tag-version --allow-same-version
       # HACK: jobs.<job_id>.if does not support hashFiles function, so we have to copy it to the each step
       - if: ${{ inputs.docker-build-enabled && (hashFiles(inputs.dockerfile-path) != '') }}
         uses: nepalevov/ci/actions/build_docker@main
@@ -204,7 +205,7 @@ jobs:
           image-extra-aliases: |
             ${{ startsWith(github.ref, 'refs/heads/release-') && needs.calculate_version.outputs.is-latest == 'true' && format('{0}/{1}:{2}', 'ghcr.io', env.IMAGE_NAME, 'latest') || ''}}
       - name: Publish Packages to Npmjs
-        if: ${{ inputs.publish-enabled && startsWith(github.ref, 'refs/heads/release-') }}
+        if: ${{ inputs.publish-enabled }}
         shell: bash
         run: |
           #!/bin/bash
@@ -213,9 +214,11 @@ jobs:
           # 1. (naive) check if a package with the same version is already exists in the registry
           # 2. build the package using either `build:publishable` (useful for monorepos) or `build` script
           # 3. publish the package using `publish` script with distribution tags:
-          #    - release candidate version --> `rc` distribution tag
-          #    - semantically "latest" stable version --> `latest` distribution tag
-          #    - other cases (non-latest stable) --> `stable-{release-line}` distribution tag (e.g. `stable-1.0`)
+          #    - development branch --> `development` distribution tag
+          #    - release candidate version --> `{release-line}-rc` distribution tag (e.g. `1.0-rc`)
+          #    - stable version
+          #      - `latest` distribution tag if it's semantically latest stable version
+          #      - `release-{release-line}` distribution tag (e.g. `release-1.0`) for other stable versions. HACK: we have to use this tag, otherwise npm will create `latest` by default
           PACKAGE_NAME=$(node -p "require('./package.json').name")
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
           if npm view "$PACKAGE_NAME@$PACKAGE_VERSION" &>/dev/null; then
@@ -226,19 +229,26 @@ jobs:
           else
             npm run build
           fi
-          if [ "$IS_RELEASE_CANDIDATE" = "true" ]; then
-            npm run publish -- --tag "rc"
-          elif [ "$IS_LATEST" = "true" ]; then
-            npm run publish -- --tag "latest"
-          else
-            npm run publish -- --tag "stable-$RELEASE_LINE"
+          if [ "$IS_DEVELOPMENT" = "true" ]; then
+            npm run publish -- --tag "development"
+          elif [ "$IS_RELEASE_CANDIDATE" = "true" ]; then
+            npm run publish -- --tag "$RELEASE_LINE-rc"
+          elif [ "$IS_RELEASE" = "true" ]; then
+            if [ "$IS_LATEST" = "true" ]; then
+              npm run publish -- --tag "latest"
+            else
+              npm run publish -- --tag "release-$RELEASE_LINE"
+            fi
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.ACTIONS_BOT_TOKEN }}
+          IS_DEVELOPMENT: ${{ github.ref == 'refs/heads/development' }}
           IS_RELEASE_CANDIDATE: ${{ needs.calculate_version.outputs.is-release-candidate == 'true' }}
+          IS_RELEASE: ${{ needs.calculate_version.outputs.is-release == 'true' }}
           IS_LATEST: ${{ needs.calculate_version.outputs.is-latest == 'true' }}
           RELEASE_LINE: ${{ needs.calculate_version.outputs.release-line }}
       - uses: nepalevov/ci/actions/publish_tag_release@main
+        if: ${{ startsWith(github.ref, 'refs/heads/release-') }}
         with:
           tag-version: ${{ needs.calculate_version.outputs.next-version }}
           changelog-file: "/tmp/my_changelog" # comes from generate_release_notes step; TODO: beautify

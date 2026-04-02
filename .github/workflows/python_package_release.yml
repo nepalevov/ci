@@ -137,14 +137,14 @@ jobs:
           #!/bin/bash
           sed -i "s/^version = .*/version = \"${{ needs.calculate_version.outputs.next-version-without-hyphens }}\"/g" pyproject.toml
       - name: Publish to PyPI
-        if: startsWith(github.ref, 'refs/heads/release-')
-        shell: bash
         run: |
           #!/bin/bash
           make publish
+        shell: bash
         env:
           PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
       - uses: nepalevov/ci/actions/publish_tag_release@main
+        if: ${{ startsWith(github.ref, 'refs/heads/release-') }}
         with:
           tag-version: ${{ needs.calculate_version.outputs.next-version }}
           changelog-file: "/tmp/my_changelog" # comes from generate_release_notes step; TODO: beautify

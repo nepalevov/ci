@@ -20,15 +20,15 @@ outputs:
   latest-stable-tag:
     description: Semantically latest stable (`X.Y.Z`, ignores `X.Y.Z-rc`) git tag in the repository
     value: ${{ steps.calculate-version.outputs.latest-stable-tag }}
-  is-latest:
-    description: Identifies if `next-version` is semantically greater than `latest-stable-tag`
-    value: ${{ steps.calculate-version.outputs.is-latest }}
   is-release-candidate:
     description: The `next-version` is a release candidate
     value: ${{ steps.calculate-version.outputs.is-release-candidate }}
   is-release:
     description: The `next-version` is a stable release
     value: ${{ steps.calculate-version.outputs.is-release }}
+  is-latest:
+    description: Identifies if `next-version` is semantically greater than `latest-stable-tag`
+    value: ${{ steps.calculate-version.outputs.is-latest }}
   release-line:
     description: X.Y part of the release branch, e.g. `1.0` for `release-1.0`. Empty for other branches
     value: ${{ steps.calculate-version.outputs.release-line }}
@@ -55,25 +55,23 @@ runs:
         function bump_version {
           local VERSION
           IFS='.' read -r -a VERSION <<<"${1}"
-          local BRANCH_NAME="$2"
+          shift
 
           # Split the version string into Major, Minor and Patch numbers
           local MAJOR=${VERSION[0]:-0}
           local MINOR=${VERSION[1]:-0}
           local PATCH=${VERSION[2]:-0}
-
           local PRE_RELEASE=""
 
-          # Increment the version number
-          if [[ "$BRANCH_NAME" == "development" ]]; then
-            MINOR=$((MINOR + 1))
-            PATCH=0
-            PRE_RELEASE="-rc.0"
-          elif [[ "$BRANCH_NAME" =~ ^release- ]]; then
-            PATCH=$((PATCH + 1))
-          fi
+          while [[ $# -gt 0 ]]; do
+            case "$1" in
+              --minor) MINOR=$((MINOR + 1)); PATCH=0; shift ;;
+              --patch) PATCH=$((PATCH + 1)); shift ;;
+              --pre-release) PRE_RELEASE="$2"; shift 2 ;;
+              *) shift ;;
+            esac
+          done
 
-          # Build the new version string
           echo "${MAJOR}.${MINOR}.${PATCH}${PRE_RELEASE}"
         }
 
@@ -93,8 +91,9 @@ runs:
         LATEST_STABLE_TAG=$(git tag | grep -E "^[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -1 || true)
 
         if [[ "${CURRENT_BRANCH}" == "development" ]]; then
+          DEV_N=$(git rev-list --count HEAD)
           CURRENT_VERSION="${LATEST_STABLE_TAG}"
-          NEXT_VERSION=$(bump_version "${CURRENT_VERSION}" "${CURRENT_BRANCH}")
+          NEXT_VERSION=$(bump_version "${CURRENT_VERSION}" --minor --pre-release "-dev.${DEV_N}")
 
         elif [[ "${CURRENT_BRANCH}" =~ ^release- ]]; then
           RELEASE_LINE="${CURRENT_BRANCH##release-}" # e.g. "1.0"
@@ -103,7 +102,7 @@ runs:
           if [[ -n "${STABLE_TAG}" ]]; then
             # Stable tag found = at least one release on this release line --> bump patch version
             CURRENT_VERSION="${STABLE_TAG}"
-            NEXT_VERSION=$(bump_version "${CURRENT_VERSION}" "${CURRENT_BRANCH}")
+            NEXT_VERSION=$(bump_version "${CURRENT_VERSION}" --patch)
             IS_RELEASE="true"
             if [ "$(version "${NEXT_VERSION}")" -gt "$(version "${LATEST_STABLE_TAG}")" ]; then
               IS_LATEST="true"
@@ -127,11 +126,11 @@ runs:
             if [[ -n "${LATEST_RC}" ]]; then
               RC_N=$(echo "${LATEST_RC}" | sed "s/^.*-rc\.//")
               CURRENT_VERSION="${LATEST_RC}"
-              NEXT_VERSION="${RELEASE_LINE}.0-rc.$((RC_N + 1))"
+              NEXT_VERSION=$(bump_version "${RELEASE_LINE}.0" --pre-release "-rc.$((RC_N + 1))")
 
             else
               CURRENT_VERSION=""
-              NEXT_VERSION="${RELEASE_LINE}.0-rc.0"
+              NEXT_VERSION=$(bump_version "${RELEASE_LINE}.0" --pre-release "-rc.0")
             fi
           fi
 
@@ -140,11 +139,13 @@ runs:
           exit 2
         fi
 
-        # Sanitize next version for non-semver consumers (e.g. Python PEP 440) by:
-        # 1. Remove a dot between `-rc` and the RC number
-        # 2. Remove all hyphens
-        # e.g. 1.0.0 --> 1.0.0, 1.0.0-rc.1 --> 1.0.0rc1
+        # Sanitize next version for non-semver consumers by:
+        # 1. Replaces `-dev.` with `.dev` (to match PEP 440 release format)
+        # 2. Replaces `-rc.` with `rc`
+        # 3. Remove all hyphens
+        # e.g. 1.0.0 --> 1.0.0, 1.1.0-dev.42 --> 1.1.0.dev42, 1.0.0-rc.1 --> 1.0.0rc1
         NEXT_VERSION_WITHOUT_HYPHENS=$(echo "${NEXT_VERSION}" |
+          sed 's/-dev\./\.dev/g' |
           sed 's/-rc\./rc/g' |
           sed 's/-//g')
 
