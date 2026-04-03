@@ -87,13 +87,53 @@ runs:
 
         git fetch --tags
 
-        # Stable-only latest tag (ignores RC tags)
         LATEST_STABLE_TAG=$(git tag | grep -E "^[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -1 || true)
+        LATEST_RC_TAG=$(git tag | grep -E "^[0-9]+\.[0-9]+\.0-rc\.[0-9]+$" | sort -V | tail -1 || true)
 
         if [[ "${CURRENT_BRANCH}" == "development" ]]; then
+          # Determine which is greater: latest stable tag or latest RC tag
+          # If latest stable tag is greater, next version is minor bump of given stable with dev suffix added
+          # If latest RC tag is greater, next version is given RC line with dev suffix added
+          # If no tags found, next version is 0.1.0 with dev suffix added
+          # dev suffix is `-dev.N` where N is a commit count (e.g. `-dev.42`)
           DEV_N=$(git rev-list --count HEAD)
-          CURRENT_VERSION="${LATEST_STABLE_TAG}"
-          NEXT_VERSION=$(bump_version "${CURRENT_VERSION}" --minor --pre-release "-dev.${DEV_N}")
+
+          LATEST_STABLE_LINE=""
+          if [[ -n "${LATEST_STABLE_TAG}" ]]; then
+            LATEST_STABLE_LINE=$(echo "${LATEST_STABLE_TAG}" | grep -oE "^[0-9]+\.[0-9]+")
+          fi
+          LATEST_RC_LINE=""
+          if [[ -n "${LATEST_RC_TAG}" ]]; then
+            LATEST_RC_LINE=$(echo "${LATEST_RC_TAG}" | grep -oE "^[0-9]+\.[0-9]+")
+          fi
+
+          DEV_SOURCE=""  # "stable", "rc", or ""
+          if [[ -n "${LATEST_STABLE_LINE}" && -n "${LATEST_RC_LINE}" ]]; then
+            if [ "$(version "${LATEST_STABLE_LINE}.0")" -ge "$(version "${LATEST_RC_LINE}.0")" ]; then
+              DEV_SOURCE="stable"
+            else
+              DEV_SOURCE="rc"
+            fi
+          elif [[ -n "${LATEST_STABLE_LINE}" ]]; then
+            DEV_SOURCE="stable"
+          elif [[ -n "${LATEST_RC_LINE}" ]]; then
+            DEV_SOURCE="rc"
+          fi
+
+          case "${DEV_SOURCE}" in
+            stable)
+              CURRENT_VERSION="${LATEST_STABLE_TAG}"
+              NEXT_VERSION=$(bump_version "${CURRENT_VERSION}" --minor --pre-release "-dev.${DEV_N}")
+              ;;
+            rc)
+              CURRENT_VERSION="${LATEST_RC_TAG}"
+              NEXT_VERSION="${LATEST_RC_LINE}.0-dev.${DEV_N}"
+              ;;
+            *)
+              CURRENT_VERSION=""
+              NEXT_VERSION=$(bump_version "${CURRENT_VERSION}" --minor --pre-release "-dev.${DEV_N}")
+              ;;
+          esac
 
         elif [[ "${CURRENT_BRANCH}" =~ ^release- ]]; then
           RELEASE_LINE="${CURRENT_BRANCH##release-}" # e.g. "1.0"
