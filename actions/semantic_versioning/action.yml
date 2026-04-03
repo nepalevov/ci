@@ -95,8 +95,7 @@ runs:
           # If latest stable tag is greater, next version is minor bump of given stable with dev suffix added
           # If latest RC tag is greater, next version is given RC line with dev suffix added
           # If no tags found, next version is 0.1.0 with dev suffix added
-          # dev suffix is `-dev.N` where N is a commit count (e.g. `-dev.42`)
-          DEV_N=$(git rev-list --count HEAD)
+          # dev suffix is `-dev.N` where N is commit count from the tag that determines the version base
 
           LATEST_STABLE_LINE=""
           if [[ -n "${LATEST_STABLE_TAG}" ]]; then
@@ -122,14 +121,17 @@ runs:
 
           case "${DEV_SOURCE}" in
             stable)
+              DEV_N=$(git rev-list --count "${LATEST_STABLE_TAG}..HEAD")
               CURRENT_VERSION="${LATEST_STABLE_TAG}"
               NEXT_VERSION=$(bump_version "${CURRENT_VERSION}" --minor --pre-release "-dev.${DEV_N}")
               ;;
             rc)
+              DEV_N=$(git rev-list --count "${LATEST_RC_TAG}..HEAD")
               CURRENT_VERSION="${LATEST_RC_TAG}"
               NEXT_VERSION="${LATEST_RC_LINE}.0-dev.${DEV_N}"
               ;;
             *)
+              DEV_N=$(git rev-list --count HEAD)
               CURRENT_VERSION=""
               NEXT_VERSION=$(bump_version "${CURRENT_VERSION}" --minor --pre-release "-dev.${DEV_N}")
               ;;
