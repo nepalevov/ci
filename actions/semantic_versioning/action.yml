@@ -198,11 +198,11 @@ runs:
         | next-version                 | $NEXT_VERSION                 |
         | next-version-without-hyphens | $NEXT_VERSION_WITHOUT_HYPHENS |
         | latest-stable-tag            | $LATEST_STABLE_TAG            |
-        | is-latest                    | $IS_LATEST                    |
-        | changelog-mode               | $CHANGELOG_MODE               |
-        | release-line                 | $RELEASE_LINE                 |
         | is-release-candidate         | $IS_RELEASE_CANDIDATE         |
         | is-release                   | $IS_RELEASE                   |
+        | is-latest                    | $IS_LATEST                    |
+        | release-line                 | $RELEASE_LINE                 |
+        | changelog-mode               | $CHANGELOG_MODE               |
         EOF
         )
         echo "$OUTPUTS_SUMMARY"
@@ -213,10 +213,10 @@ runs:
         echo "next-version=${NEXT_VERSION}" >>$GITHUB_OUTPUT
         echo "next-version-without-hyphens=${NEXT_VERSION_WITHOUT_HYPHENS}" >>$GITHUB_OUTPUT
         echo "latest-stable-tag=${LATEST_STABLE_TAG}" >>$GITHUB_OUTPUT
-        echo "is-latest=${IS_LATEST}" >>$GITHUB_OUTPUT
-        echo "changelog-mode=${CHANGELOG_MODE}" >>$GITHUB_OUTPUT
-        echo "release-line=${RELEASE_LINE:-}" >>$GITHUB_OUTPUT
         echo "is-release-candidate=${IS_RELEASE_CANDIDATE}" >>$GITHUB_OUTPUT
         echo "is-release=${IS_RELEASE}" >>$GITHUB_OUTPUT
+        echo "is-latest=${IS_LATEST}" >>$GITHUB_OUTPUT
+        echo "release-line=${RELEASE_LINE:-}" >>$GITHUB_OUTPUT
+        echo "changelog-mode=${CHANGELOG_MODE}" >>$GITHUB_OUTPUT
       env:
         INPUT_PROMOTE: ${{ inputs.promote }}
