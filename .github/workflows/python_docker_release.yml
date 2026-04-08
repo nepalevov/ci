@@ -1,4 +1,4 @@
-name: Python Docker Release Workflow
+name: Python Docker Release workflow
 
 on:
   workflow_call:
@@ -38,7 +38,7 @@ on:
       ort-version:
         type: string
         description: ORT version to use
-        default: latest
+        default: "latest"
       trivy-enabled:
         type: boolean
         description: Enable Trivy scanning
@@ -50,11 +50,11 @@ on:
       trivy-severity:
         type: string
         description: Severities of vulnerabilities to fail the build
-        default: CRITICAL,HIGH
+        default: "CRITICAL,HIGH"
       trivy-severity-for-sarif:
         type: string
         description: Severities of vulnerabilities in SARIF report
-        default: CRITICAL,HIGH
+        default: "CRITICAL,HIGH"
       trivy-limit-severities-for-sarif:
         type: boolean
         description: By default SARIF format enforces output of all vulnerabilities regardless of configured severities. To override this behavior set this parameter to true and specify desired severities in the `trivy-severity-for-sarif` parameter
@@ -78,7 +78,7 @@ on:
       platforms:
         type: string
         description: Docker build platforms
-        default: linux/amd64
+        default: "linux/amd64"
 
 env:
   IMAGE_NAME: ${{ github.repository }}
@@ -99,17 +99,18 @@ jobs:
       poetry-version: ${{ inputs.poetry-version }}
       runs-on: ${{ inputs.runs-on }}
       maximize-build-space: ${{ inputs.maximize-build-space }}
+
   calculate_version:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     outputs:
-      next-version: ${{ steps.semantic-versioning.outputs.next-version }}
-      next-version-without-hyphens: ${{ steps.semantic-versioning.outputs.next-version-without-hyphens }}
-      is-latest: ${{ steps.semantic-versioning.outputs.is-latest }}
-      latest-stable-tag: ${{ steps.semantic-versioning.outputs.latest-stable-tag }}
-      changelog-mode: ${{ steps.semantic-versioning.outputs.changelog-mode }}
+      next-version: ${{ steps.semantic_versioning.outputs.next-version }}
+      next-version-without-hyphens: ${{ steps.semantic_versioning.outputs.next-version-without-hyphens }}
+      is-latest: ${{ steps.semantic_versioning.outputs.is-latest }}
+      latest-stable-tag: ${{ steps.semantic_versioning.outputs.latest-stable-tag }}
+      changelog-mode: ${{ steps.semantic_versioning.outputs.changelog-mode }}
     steps:
       - uses: nepalevov/ci/actions/semantic_versioning@main
-        id: semantic-versioning
+        id: semantic_versioning
         with:
           promote: ${{ inputs.promote }}
   release:
@@ -122,7 +123,7 @@ jobs:
       - calculate_version
       - test
     steps:
-      - name: Maximize Build Space
+      - name: Maximize build space
         uses: nepalevov/maximize-build-space@046c48361370e2f3fa758bd2f10c6ce29109ef62 # v1.1.0
         if: ${{ inputs.maximize-build-space }}
         with:
@@ -156,10 +157,9 @@ jobs:
         with:
           lfs: true
           token: ${{ secrets.ACTIONS_BOT_TOKEN }}
-      - name: Set Version
+      - name: Set version
         shell: bash
         run: |
-          #!/bin/bash
           sed -i "s/^version = .*/version = \"${{ needs.calculate_version.outputs.next-version-without-hyphens }}\"/g" pyproject.toml
       - uses: nepalevov/ci/actions/build_docker@main
         with:
@@ -177,7 +177,7 @@ jobs:
           trivy-limit-severities-for-sarif: ${{ inputs.trivy-limit-severities-for-sarif }}
           platforms: ${{ inputs.platforms }}
           image-extra-aliases: |
-            ${{ startsWith(github.ref, 'refs/heads/release-') && needs.calculate_version.outputs.is-latest == 'true' && format('{0}/{1}:{2}', 'ghcr.io', env.IMAGE_NAME, 'latest') || ''}}
+            ${{ startsWith(github.ref, 'refs/heads/release-') && needs.calculate_version.outputs.is-latest == 'true' && format('{0}/{1}:{2}', 'ghcr.io', env.IMAGE_NAME, 'latest') || '' }}
       - uses: nepalevov/ci/actions/publish_tag_release@main
         if: ${{ startsWith(github.ref, 'refs/heads/release-') }}
         with:

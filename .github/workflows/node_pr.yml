@@ -1,4 +1,4 @@
-name: NodeJS PR Workflow
+name: NodeJS PR workflow
 
 on:
   workflow_call:
@@ -42,10 +42,10 @@ on:
       ort-version:
         type: string
         description: ORT version to use
-        default: latest
+        default: "latest"
       docker-build-enabled:
         type: boolean
-        description: Enable Docker build
+        description: "Enable Docker build"
         default: true
       trivy-enabled:
         type: boolean
@@ -58,11 +58,11 @@ on:
       trivy-severity:
         type: string
         description: Severities of vulnerabilities to fail the build
-        default: CRITICAL,HIGH
+        default: "CRITICAL,HIGH"
       trivy-severity-for-sarif:
         type: string
-        description: Severities of vulnerabilities in SARIF report
-        default: CRITICAL,HIGH
+        description: "Severities of vulnerabilities in SARIF report"
+        default: "CRITICAL,HIGH"
       trivy-limit-severities-for-sarif:
         type: boolean
         description: By default SARIF format enforces output of all vulnerabilities regardless of configured severities. To override this behavior set this parameter to true and specify desired severities in the `trivy-severity-for-sarif` parameter
@@ -77,16 +77,16 @@ on:
         default: false
       runs-on:
         type: string
-        description: Overrides jobs runs-on settings (json-encoded list)
+        description: "Overrides jobs runs-on settings (json-encoded list)"
         default: '["ubuntu-24.04"]'
       platforms:
         type: string
-        description: Docker build platforms
-        default: linux/amd64
+        description: "Docker build platforms"
+        default: "linux/amd64"
       dockerfile-path:
         type: string
-        description: Path to the Dockerfile (default is ./Dockerfile)
-        default: Dockerfile
+        description: "Path to the Dockerfile (default: ./Dockerfile)"
+        default: "Dockerfile"
 
 env:
   IMAGE_NAME: ${{ github.repository }}
@@ -112,7 +112,7 @@ jobs:
     if: ${{ inputs.docker-build-enabled }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
-      - name: Maximize Build Space
+      - name: Maximize build space
         uses: nepalevov/maximize-build-space@046c48361370e2f3fa758bd2f10c6ce29109ef62 # v1.1.0
         if: ${{ inputs.maximize-build-space }}
         with:

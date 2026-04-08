@@ -1,48 +1,48 @@
-name: Java Tests
+name: Java tests
 
 on:
   workflow_call:
     inputs:
       bypass-checks:
         type: boolean
-        description: Do not fail pipeline if checks failed
         default: false
+        description: Do not fail pipeline if checks failed
       style-checks-enabled:
         type: boolean
-        description: Enable style_checks
         default: true
+        description: Enable style_checks
       style-checks-bypassed:
         type: boolean
-        description: Do not fail pipeline if style_checks failed
         default: false
+        description: Do not fail pipeline if style_checks failed
       code-checks-enabled:
         type: boolean
-        description: Enable code_checks
         default: true
+        description: Enable code_checks
       code-checks-bypassed:
         type: boolean
-        description: Do not fail pipeline if code_checks failed
         default: false
+        description: Do not fail pipeline if code_checks failed
       ort-enabled:
         type: boolean
-        description: Enable ORT scanning
         default: true
+        description: Enable ORT scanning
       ort-bypassed:
         type: boolean
-        description: Do not fail pipeline if ORT scan failed
         default: false
+        description: Do not fail pipeline if ORT scan failed
       ort-version:
         type: string
+        default: "latest"
         description: ORT version to use
-        default: latest
       java-version:
         type: string
-        description: Java version to use
         default: "17"
+        description: Java version to use
       java-distribution:
         type: string
+        default: "temurin"
         description: Java distribution to use
-        default: temurin
       runs-on:
         type: string
         description: Overrides jobs runs-on settings (json-encoded list)
@@ -67,7 +67,6 @@ jobs:
           GPR_USERNAME: ${{ github.actor }}
           GPR_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          #!/bin/bash
           ./gradlew checkstyleMain
 
   code_checks:
@@ -88,7 +87,6 @@ jobs:
           GPR_USERNAME: ${{ github.actor }}
           GPR_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          #!/bin/bash
           ./gradlew check || { echo "::error::Tests failed" && exit 1; } # TODO: figure out why we need to capture exit code
 
   ort:

@@ -1,7 +1,5 @@
-name: Build Docker
-
+name: Build docker
 description: Build a docker image, tag it, (optionally) scan it, and (optionally) push it to Dockerhub and GHCR
-
 inputs:
   bypass-checks:
     description: Do not fail pipeline if checks failed
@@ -40,20 +38,20 @@ inputs:
     description: Extra aliases for the image, e.g. to publish to multiple registries
     default: ""
   ghcr-username:
-    description: GitHub Container Registry (GHCR) username. Required for pushing to GHCR
-    default: "${{ github.actor }}"
+    description: GitHub Container Registry username. This is required for pushing to GitHub Container Registry
+    default: ${{ github.actor }}
   ghcr-password:
-    description: GitHub Container Registry (GHCR) password/token. Required for pushing to GHCR
+    description: GitHub Container Registry password/token. This is required for pushing to GitHub Container Registry
     default: ""
   dockerhub-username:
-    description: Docker Hub username. Required for pushing to Docker Hub
+    description: Docker Hub username. This is required for pushing to Docker Hub
     default: ""
   dockerhub-password:
-    description: Docker Hub password/token. Required for pushing to Docker Hub
+    description: Docker Hub password/token. This is required for pushing to Docker Hub
     default: ""
   gpr-username:
     description: GitHub Package Registry username (for pulling packages from image being built)
-    default: "${{ github.actor }}"
+    default: ${{ github.actor }}
   gpr-password:
     description: GitHub Package Registry password/token (for pulling packages from image being built)
     default: ""
@@ -67,7 +65,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Setup Docker QEMU
+    - name: Setup Docker Qemu
       if: ${{ inputs.platforms != 'linux/amd64' }}
       uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
     - name: Setup Docker Buildx
@@ -114,7 +112,7 @@ runs:
     - name: Run Trivy scanner (JSON output, no fail)
       id: trivy
       if: ${{ fromJSON(inputs.trivy-enabled) }} # workaround for composite jobs not being able to pass boolean inputs
-      uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # v0.35.0
+      uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
       with:
         image-ref: "${{ inputs.image-name }}:${{ inputs.image-tag }}"
         format: "json"
@@ -133,7 +131,6 @@ runs:
       # Do not generate SARIF reports for pull requests from forks
       if: ${{ steps.trivy.outcome == 'success' && !github.event.repository.private && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) }}
       run: |
-        #!/bin/bash
         trivy convert --format sarif --output trivy-results.sarif --exit-code 0 trivy-results.json
       shell: bash
       env:
@@ -154,7 +151,6 @@ runs:
     - name: Generate Trivy report (Table, must fail on findings)
       if: ${{ steps.trivy.outcome == 'success' }}
       run: |
-        #!/bin/bash
         trivy convert --format table --exit-code 1 trivy-results.json
       shell: bash
       env:

@@ -1,4 +1,4 @@
-name: Python Package Release Workflow
+name: Python Package Release workflow
 
 on:
   workflow_call:
@@ -42,7 +42,7 @@ on:
       ort-version:
         type: string
         description: ORT version to use
-        default: latest
+        default: "latest"
       trivy-enabled:
         type: boolean
         description: Enable Trivy scanning
@@ -54,11 +54,11 @@ on:
       trivy-severity:
         type: string
         description: Severities of vulnerabilities to fail the build
-        default: CRITICAL,HIGH
+        default: "CRITICAL,HIGH"
       trivy-severity-for-sarif:
         type: string
         description: Severities of vulnerabilities in SARIF report
-        default: CRITICAL,HIGH
+        default: "CRITICAL,HIGH"
       trivy-limit-severities-for-sarif:
         type: boolean
         description: By default SARIF format enforces output of all vulnerabilities regardless of configured severities. To override this behavior set this parameter to true and specify desired severities in the `trivy-severity-for-sarif` parameter
@@ -97,16 +97,17 @@ jobs:
       python-version: ${{ inputs.python-version }}
       poetry-version: ${{ inputs.poetry-version }}
       runs-on: ${{ inputs.runs-on }}
+
   calculate_version:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     outputs:
-      next-version: ${{ steps.semantic-versioning.outputs.next-version }}
-      next-version-without-hyphens: ${{ steps.semantic-versioning.outputs.next-version-without-hyphens }}
-      latest-stable-tag: ${{ steps.semantic-versioning.outputs.latest-stable-tag }}
-      changelog-mode: ${{ steps.semantic-versioning.outputs.changelog-mode }}
+      next-version: ${{ steps.semantic_versioning.outputs.next-version }}
+      next-version-without-hyphens: ${{ steps.semantic_versioning.outputs.next-version-without-hyphens }}
+      latest-stable-tag: ${{ steps.semantic_versioning.outputs.latest-stable-tag }}
+      changelog-mode: ${{ steps.semantic_versioning.outputs.changelog-mode }}
     steps:
       - uses: nepalevov/ci/actions/semantic_versioning@main
-        id: semantic-versioning
+        id: semantic_versioning
         with:
           promote: ${{ inputs.promote }}
   release:
@@ -131,16 +132,15 @@ jobs:
         with:
           python-version: ${{ inputs.python-version }}
           poetry-version: ${{ inputs.poetry-version }}
-      - name: Set Version
+      - name: Set version
         shell: bash
         run: |
-          #!/bin/bash
           sed -i "s/^version = .*/version = \"${{ needs.calculate_version.outputs.next-version-without-hyphens }}\"/g" pyproject.toml
-      - name: Publish to PyPI
-        run: |
-          #!/bin/bash
-          make publish
+      - name: Publish to pypi
         shell: bash
+        run: |
+          make build
+          make publish
         env:
           PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
       - uses: nepalevov/ci/actions/publish_tag_release@main

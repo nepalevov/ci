@@ -1,4 +1,4 @@
-name: NodeJS Tests
+name: NodeJS tests
 
 on:
   workflow_call:
@@ -42,7 +42,7 @@ on:
       ort-version:
         type: string
         description: ORT version to use
-        default: latest
+        default: "latest"
       node-version:
         type: string
         description: NodeJS version to use
@@ -68,8 +68,8 @@ jobs:
         continue-on-error: ${{ inputs.bypass-checks || inputs.format-checks-bypassed }}
         shell: bash
         run: |
-          #!/bin/bash
           npm run format
+
   style_checks:
     if: ${{ inputs.style-checks-enabled }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}
@@ -85,8 +85,8 @@ jobs:
         continue-on-error: ${{ inputs.bypass-checks || inputs.style-checks-bypassed }}
         shell: bash
         run: |
-          #!/bin/bash
           npm run lint
+
   code_checks:
     if: ${{ inputs.code-checks-enabled }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}
@@ -102,8 +102,8 @@ jobs:
         continue-on-error: ${{ inputs.bypass-checks || inputs.code-checks-bypassed }}
         shell: bash
         run: |
-          #!/bin/bash
           npm run test
+
   ort:
     if: ${{ inputs.ort-enabled }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}
@@ -117,6 +117,6 @@ jobs:
         with:
           image: "ghcr.io/oss-review-toolkit/ort:${{ inputs.ort-version }}"
           allow-dynamic-versions: "true"
-          fail-on: violations
+          fail-on: "violations"
           ort-cli-args: "-P ort.forceOverwrite=true --stacktrace -P ort.analyzer.enabledPackageManagers=NPM"
         continue-on-error: ${{ fromJSON(env.CONTINUE_ON_ERROR) }}

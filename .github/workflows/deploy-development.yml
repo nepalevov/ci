@@ -10,11 +10,11 @@ on:
       gitlab-project-ref:
         type: string
         description: The branch or tag to run the pipeline on
-        default: master
+        default: "master"
       environment-name:
         type: string
         description: The GitHub environment name to use for the deployment
-        default: development
+        default: "development"
     secrets:
       DEPLOY_HOST:
         required: true
@@ -24,13 +24,13 @@ on:
         required: true
 
 jobs:
-  trigger_pipeline:
+  trigger-pipeline:
     runs-on: ubuntu-latest
     concurrency: ${{ inputs.environment-name }}
     environment:
       name: ${{ inputs.environment-name }}
     steps:
-      - name: Deploy Environment
+      - name: Deploy environment
         id: deploy
         uses: digital-blueprint/gitlab-pipeline-trigger-action@c59b56e9d2688ab42c1304322ac8831a4ef6f7d2 # v1.4.0
         with:

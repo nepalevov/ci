@@ -1,4 +1,4 @@
-name: NodeJS Release Workflow
+name: NodeJS Release workflow
 
 on:
   workflow_call:
@@ -46,10 +46,10 @@ on:
       ort-version:
         type: string
         description: ORT version to use
-        default: latest
+        default: "latest"
       docker-build-enabled:
         type: boolean
-        description: Enable Docker build
+        description: "Enable Docker build"
         default: true
       trivy-enabled:
         type: boolean
@@ -62,11 +62,11 @@ on:
       trivy-severity:
         type: string
         description: Severities of vulnerabilities to fail the build
-        default: CRITICAL,HIGH
+        default: "CRITICAL,HIGH"
       trivy-severity-for-sarif:
         type: string
         description: Severities of vulnerabilities in SARIF report
-        default: CRITICAL,HIGH
+        default: "CRITICAL,HIGH"
       trivy-limit-severities-for-sarif:
         type: boolean
         description: By default SARIF format enforces output of all vulnerabilities regardless of configured severities. To override this behavior set this parameter to true and specify desired severities in the `trivy-severity-for-sarif` parameter
@@ -89,12 +89,12 @@ on:
         default: '["ubuntu-24.04"]'
       platforms:
         type: string
-        description: Docker build platforms
-        default: linux/amd64
+        description: Docker build platform
+        default: "linux/amd64"
       dockerfile-path:
         type: string
-        description: Path to the Dockerfile (default is ./Dockerfile)
-        default: Dockerfile
+        description: Path to the Dockerfile
+        default: "Dockerfile"
 
 env:
   IMAGE_NAME: ${{ github.repository }}
@@ -115,19 +115,20 @@ jobs:
       ort-version: ${{ inputs.ort-version }}
       node-version: ${{ inputs.node-version }}
       runs-on: ${{ inputs.runs-on }}
+
   calculate_version:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     outputs:
-      next-version: ${{ steps.semantic-versioning.outputs.next-version }}
-      latest-stable-tag: ${{ steps.semantic-versioning.outputs.latest-stable-tag }}
-      is-release-candidate: ${{ steps.semantic-versioning.outputs.is-release-candidate }}
-      is-release: ${{ steps.semantic-versioning.outputs.is-release }}
-      is-latest: ${{ steps.semantic-versioning.outputs.is-latest }}
-      release-line: ${{ steps.semantic-versioning.outputs.release-line }}
-      changelog-mode: ${{ steps.semantic-versioning.outputs.changelog-mode }}
+      next-version: ${{ steps.semantic_versioning.outputs.next-version }}
+      latest-stable-tag: ${{ steps.semantic_versioning.outputs.latest-stable-tag }}
+      is-release-candidate: ${{ steps.semantic_versioning.outputs.is-release-candidate }}
+      is-release: ${{ steps.semantic_versioning.outputs.is-release }}
+      is-latest: ${{ steps.semantic_versioning.outputs.is-latest }}
+      release-line: ${{ steps.semantic_versioning.outputs.release-line }}
+      changelog-mode: ${{ steps.semantic_versioning.outputs.changelog-mode }}
     steps:
       - uses: nepalevov/ci/actions/semantic_versioning@main
-        id: semantic-versioning
+        id: semantic_versioning
         with:
           promote: ${{ inputs.promote }}
   release:
@@ -140,7 +141,7 @@ jobs:
       - calculate_version
       - test
     steps:
-      - name: Maximize Build Space
+      - name: Maximize build space
         uses: nepalevov/maximize-build-space@046c48361370e2f3fa758bd2f10c6ce29109ef62 # v1.1.0
         if: ${{ inputs.maximize-build-space }}
         with:
@@ -179,10 +180,9 @@ jobs:
           node-version: ${{ inputs.node-version }}
           clean-install: true
           registry-url: "https://npm.pkg.github.com"
-      - name: Set Version
+      - name: Set version
         shell: bash
         run: |
-          #!/bin/bash
           npm version ${{ needs.calculate_version.outputs.next-version }} --no-git-tag-version --allow-same-version
       # HACK: jobs.<job_id>.if does not support hashFiles function, so we have to copy it to the each step
       - if: ${{ inputs.docker-build-enabled && (hashFiles(inputs.dockerfile-path) != '') }}
@@ -203,8 +203,8 @@ jobs:
           platforms: ${{ inputs.platforms }}
           dockerfile-path: ${{ inputs.dockerfile-path }}
           image-extra-aliases: |
-            ${{ startsWith(github.ref, 'refs/heads/release-') && needs.calculate_version.outputs.is-latest == 'true' && format('{0}/{1}:{2}', 'ghcr.io', env.IMAGE_NAME, 'latest') || ''}}
-      - name: Publish Packages to Npmjs
+            ${{ startsWith(github.ref, 'refs/heads/release-') && needs.calculate_version.outputs.is-latest == 'true' && format('{0}/{1}:{2}', 'ghcr.io', env.IMAGE_NAME, 'latest') || '' }}
+      - name: Publish packages to npmjs
         if: ${{ inputs.publish-enabled }}
         shell: bash
         run: |

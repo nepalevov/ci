@@ -1,4 +1,4 @@
-name: Python Package Tests
+name: Python Package tests
 
 on:
   workflow_call:
@@ -100,8 +100,8 @@ jobs:
         continue-on-error: ${{ inputs.bypass-checks || inputs.style-checks-bypassed }}
         shell: bash
         run: |
-          #!/bin/bash
           make lint
+
   code_checks:
     if: ${{ inputs.code-checks-enabled }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}
@@ -121,15 +121,15 @@ jobs:
         continue-on-error: ${{ inputs.bypass-checks || inputs.code-checks-bypassed }}
         shell: bash
         run: |
-          #!/bin/bash
           # Workflow explanation:
           # 1. Use venv from python_prepare action and build the package(s)
           # 2. Check package(s) long description renders correctly with twine
           # 3. Run tests (with specific Python version)
-          source "$VENV"
+          source $VENV
           make build
           pipx run "twine~=6.0" check dist/*
           make test PYTHON=${{ matrix.python-version }}
+
   ort:
     if: ${{ inputs.ort-enabled }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}
@@ -143,9 +143,10 @@ jobs:
         with:
           image: "ghcr.io/oss-review-toolkit/ort:${{ inputs.ort-version }}"
           allow-dynamic-versions: "true"
-          fail-on: violations
+          fail-on: "violations"
           ort-cli-args: "-P ort.forceOverwrite=true --stacktrace -P ort.analyzer.enabledPackageManagers=Poetry"
         continue-on-error: ${{ fromJSON(env.CONTINUE_ON_ERROR) }}
+
   trivy:
     if: ${{ inputs.trivy-enabled }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}
@@ -155,7 +156,7 @@ jobs:
           lfs: true
       - name: Run Trivy vulnerability scanner (JSON output, no fail)
         id: trivy
-        uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # v0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           scan-type: "fs"
           scan-ref: "."
@@ -174,7 +175,6 @@ jobs:
         # Do not generate SARIF reports for pull requests from forks
         if: ${{ steps.trivy.outcome == 'success' && !github.event.repository.private && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) }}
         run: |
-          #!/bin/bash
           trivy convert --format sarif --output trivy-results.sarif --exit-code 0 trivy-results.json
         shell: bash
         env:
@@ -192,7 +192,6 @@ jobs:
       - name: Generate Trivy report (Table, must fail on findings)
         if: ${{ steps.trivy.outcome == 'success' }}
         run: |
-          #!/bin/bash
           trivy convert --format table --exit-code 1 trivy-results.json
         shell: bash
         env:

@@ -1,4 +1,4 @@
-name: Generic Docker Tests
+name: Generic Docker tests
 
 on:
   workflow_call:
@@ -26,7 +26,7 @@ on:
       ort-version:
         type: string
         description: ORT version to use
-        default: latest
+        default: "latest"
       runs-on:
         type: string
         description: Overrides jobs runs-on settings (json-encoded list)
@@ -45,8 +45,8 @@ jobs:
         continue-on-error: ${{ inputs.bypass-checks || inputs.style-checks-bypassed }}
         shell: bash
         run: |
-          #!/bin/bash
           make lint
+
   ort:
     if: ${{ inputs.ort-enabled }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}
