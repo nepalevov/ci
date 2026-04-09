@@ -95,6 +95,23 @@ jobs:
       java-distribution: ${{ inputs.java-distribution }}
       runs-on: ${{ inputs.runs-on }}
 
+  submit-dependencies:
+    # Do not submit dependencies on private repos - GitHub Advanced Security is not enabled
+    if: ${{ !github.event.repository.private }}
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          lfs: true
+      - uses: nepalevov/ci/actions/java_prepare@main
+        with:
+          java-version: ${{ inputs.java-version }}
+          java-distribution: ${{ inputs.java-distribution }}
+      - uses: gradle/actions/dependency-submission@f29f5a9d7b09a7c6b29859002d29d24e1674c884 # v5.0.1
+        with:
+          dependency-graph: generate-and-upload
+          artifact-retention-days: 1
+
   build:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
@@ -110,14 +127,6 @@ jobs:
         env:
           GPR_USERNAME: ${{ github.actor }}
           GPR_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-      - name: Generate and save dependency graph
-        uses: gradle/actions/dependency-submission@f29f5a9d7b09a7c6b29859002d29d24e1674c884 # v5.0.1
-        with:
-          dependency-graph: generate-and-upload
-          artifact-retention-days: 3
-          # build-scan-publish: true
-          # build-scan-terms-of-use-url: "https://gradle.com/help/legal-terms-of-use"
-          # build-scan-terms-of-use-agree: "yes"
 
   docker_build:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
