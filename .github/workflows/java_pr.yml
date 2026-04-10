@@ -99,6 +99,8 @@ jobs:
     # Do not submit dependencies on private repos - GitHub Advanced Security is not enabled
     if: ${{ !github.event.repository.private }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -111,6 +113,9 @@ jobs:
         with:
           dependency-graph: generate-and-upload
           artifact-retention-days: 1
+        env:
+          GPR_USERNAME: ${{ github.actor }}
+          GPR_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
   build:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
