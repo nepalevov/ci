@@ -3,19 +3,27 @@
 - [AI DIAL workflows](#ai-dial-workflows)
   - [Overview](#overview)
   - [Usage](#usage)
+    - [Branching](#branching)
+      - [Skipping Release Candidates (RC)](#skipping-release-candidates-rc)
+    - [Changelog Generation](#changelog-generation)
+      - [Filters and transformers](#filters-and-transformers)
     - [NodeJS (npm)](#nodejs-npm)
+      - [Requirements](#requirements)
       - [PR Workflow](#pr-workflow)
       - [Release Workflow](#release-workflow)
     - [Java (gradle)](#java-gradle)
+      - [Requirements](#requirements-1)
       - [PR Workflow (Docker)](#pr-workflow-docker)
       - [Release Workflow (Docker)](#release-workflow-docker)
       - [Dependency Review](#dependency-review)
     - [Python (Poetry)](#python-poetry)
+      - [Requirements](#requirements-2)
       - [PR Workflow (Docker)](#pr-workflow-docker-1)
       - [Release Workflow (Docker)](#release-workflow-docker-1)
       - [PR Workflow (package)](#pr-workflow-package)
       - [Release Workflow (package)](#release-workflow-package)
     - [Generic Docker](#generic-docker)
+      - [Requirements](#requirements-3)
       - [PR Workflow](#pr-workflow-1)
       - [Release Workflow](#release-workflow-1)
     - [Others](#others)
@@ -41,10 +49,111 @@ Contains reusable workflows for AI-DIAL group of repositories under EPAM GitHub 
 
 These workflows could be imported to any repository under EPAM GitHub organization as standard `.github/workflows` files. See examples below (replace `@main` with specific version tag).
 
+### Branching
+
+We expect consumer repositories to follow the given branching strategy:
+
+1. A `development` is the branch for all new work
+1. All code changes are merged from feature branches to `development` via pull requests
+1. When there's enough changes in `development` for a new release, maintainer cuts `release-X.Y` branch. Release enters stabilization phase, the branch produce numbered RC artifacts (`X.Y.0-rc.N`)
+1. Once the maintainer decides the release is stable, he manually (`workflow_dispatch`) triggers `Release Workflow` for `release-X.Y` branch with `promote` option set. Stable `X.Y.0` is published
+1. Since that moment, `release-X.Y` enters maintenance phase, and any subsequent pushes to that branch produce patches (`X.Y.1`, `X.Y.2`, ...)
+1. Fixes to maintenance branches must be backported from `development` branch via cherry-picks
+
+More details can be found in [Branching Strategy](docs/BRANCHING_STRATEGY.md)
+
+#### Skipping Release Candidates (RC)
+
+In some cases, maintainers may want to skip Release Candidate (RC) phase and produce stable versions directly from `release-X.Y` branches. For example, if repository produce package(s) as build artifacts, and no strict QA/verification process is required.
+
+To achieve that, replace `workflow_dispatch` input approach with static `true` value for `promote` input in `Release Workflow`
+
+<details>
+<summary>Example</summary>
+
+```diff
+name: Release Workflow
+
+on:
+  push:
+    branches: [development, release-*]
+  workflow_dispatch:
+-   inputs:
+-     promote:
+-       type: boolean
+-       default: false
+-       description: Promote release to stable (for release-* branches only)
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    uses: nepalevov/ci/.github/workflows/python_package_release.yml@main
+    with:
+-     promote: ${{ github.event_name == 'workflow_dispatch' && inputs.promote }}
++     promote: true
+    secrets: inherit
+```
+
+</details>
+
+### Changelog Generation
+
+Changelog is automatically generated based on git commit history (commit messages) and added to git tags and GitHub releases description
+
+| Scenario                          | Baseline                   | Scope                                                                      |
+| --------------------------------- | -------------------------- | -------------------------------------------------------------------------- |
+| First RC (`X.Y.0-rc.0`)           | Latest global stable tag   | Commits since latest stable tag (full history if no stable tag exists)     |
+| Subsequent RC (`X.Y.0-rc.N`, N>0) | Previous RC tag            | Commits since previous RC tag only                                         |
+| Stable promotion (`X.Y.0`)        | Latest global stable tag   | Commits on release branch since cut (full history if no stable tag exists) |
+| Patch version (`X.Y.1+`)          | Previous patch version tag | Commits since previous patch only                                          |
+
+#### Filters and transformers
+
+- Deduplication: the changelog uses two layers to prevent duplicate changelog entries:
+  - patch-ID comparison (`git log --cherry-pick`): catches cherry-picks with identical changes
+  - commit-message matching: catches conflict-resolved or amended cherry-picks
+- `[skip ci] Update version` commits are excluded from the changelog. They are typically generated by the release workflow and don't contain user-facing changes
+- `Merge branch` commits are excluded from the changelog
+- Changelog entries are grouped by type: `Features`, `Fixes`, `Other`. `Breaking changes` are highlighted as a separate section at the top
+
 ### NodeJS (npm)
 
 > [!tip]
-> Workflows allow independent choices of output artifacts: container image, npm package, or both (default) via `docker-build-enabled` and `publish-enabled` inputs respectively. Set variable values to match your needs.
+> Workflows allow independent choices of build artifacts: container image, npm package, or both (default). Can be controlled via `docker-build-enabled` and `publish-enabled` inputs respectively. Set inputs values to match your repository needs.
+
+#### Requirements
+
+Consumer repository **must** have:
+
+- `package.json` file with `format`, `lint`, `test`, `build`, and `publish` scripts defined
+
+`package.json`
+
+```json
+{
+  "name": "@scope/my-package",
+  "version": "0.0.0",
+  "scripts": {
+    "format": "prettier --check .",
+    "lint": "eslint .",
+    "test": "jest",
+    "build": "tsc",
+    "publish": "npm publish"
+  }
+}
+```
+
+> [!warning]
+> The `version` value is updated by CI/CD automation - please do not modify it manually. See more details in [Branching](#branching) section
+
+> [!tip]
+> We require script *names* only, not specific implementations - you can use any tools you like as long as you provide the required scripts
+
+> [!tip]
+> If a `build:publishable` script exists, it takes precedence over `build` for the release build (useful in monorepos)
 
 #### PR Workflow
 
@@ -77,6 +186,12 @@ name: Release Workflow
 on:
   push:
     branches: [development, release-*]
+  workflow_dispatch:
+    inputs:
+      promote:
+        type: boolean
+        default: false
+        description: Promote release to stable (for release-* branches only)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -85,10 +200,33 @@ concurrency:
 jobs:
   release:
     uses: nepalevov/ci/.github/workflows/node_release.yml@main
+    with:
+      promote: ${{ github.event_name == 'workflow_dispatch' && inputs.promote }}
     secrets: inherit
 ```
 
 ### Java (gradle)
+
+#### Requirements
+
+Consumer repository must have:
+
+- `build.gradle` with `check`, `checkstyleMain` and `build` tasks exposed
+
+`build.gradle`
+
+```groovy
+plugins {
+    id "java" // exposes `check`, `build` tasks
+    id "checkstyle" // exposes `checkstyleMain` task
+}
+
+group = "org.example"
+version = "0.0.0"
+```
+
+> [!warning]
+> The `version` value is updated by CI/CD automation - please do not modify it manually. See more details in [Branching](#branching) section
 
 #### PR Workflow (Docker)
 
@@ -121,6 +259,12 @@ name: Release Workflow
 on:
   push:
     branches: [development, release-*]
+  workflow_dispatch:
+    inputs:
+      promote:
+        type: boolean
+        default: false
+        description: Promote release to stable (for release-* branches only)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -129,6 +273,8 @@ concurrency:
 jobs:
   release:
     uses: nepalevov/ci/.github/workflows/java_release.yml@main
+    with:
+      promote: ${{ github.event_name == 'workflow_dispatch' && inputs.promote }}
     secrets: inherit
 ```
 
@@ -267,6 +413,55 @@ jobs:
 
 ### Python (Poetry)
 
+#### Requirements
+
+Consumer repository must have:
+
+- `Makefile` file with `lint`, `build` (only for Python packages), `test`, `publish` (only for Python packages) targets defined
+- `pyproject.toml` file with `name` and `version` defined
+
+`Makefile`
+
+```makefile
+PORT ?= 5001
+
+.PHONY: install lint build test publish
+
+install:
+	poetry install --all-extras
+
+lint: install
+	poetry run ruff check .
+	poetry run ruff format --check .
+
+build: install # Required only for Python packages
+	poetry build
+
+test: install
+	if [ -n "$(PYTHON)" ]; then poetry env use "$(PYTHON)"; fi
+	poetry run pytest
+
+publish: # Required only for Python packages
+	poetry publish --username __token__ --password $(PYPI_TOKEN) --skip-existing
+```
+
+`pyproject.toml`
+
+```toml
+[project]
+name = "my-package"
+version = "0.0.0"
+```
+
+> [!warning]
+> The `version` value is updated by CI/CD automation - please do not modify it manually. See more details in [Branching](#branching) section
+
+> [!note]
+> `build` and `publish` Makefile targets are required only for repositories that produce Python packages as build artifacts
+
+> [!tip]
+> `test` target receives Python version, e.g. `make test PYTHON=<version>`, where `<version>` is the one defined in `code-checks-python-versions` workflow input. If multiple versions are defined, the workflow will run tests for each of them in parallel
+
 #### PR Workflow (Docker)
 
 `pr.yml`
@@ -298,6 +493,12 @@ name: Release Workflow
 on:
   push:
     branches: [development, release-*]
+  workflow_dispatch:
+    inputs:
+      promote:
+        type: boolean
+        default: false
+        description: Promote release to stable (for release-* branches only)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -306,6 +507,8 @@ concurrency:
 jobs:
   release:
     uses: nepalevov/ci/.github/workflows/python_docker_release.yml@main
+    with:
+      promote: ${{ github.event_name == 'workflow_dispatch' && inputs.promote }}
     secrets: inherit
 ```
 
@@ -340,6 +543,12 @@ name: Release Workflow
 on:
   push:
     branches: [development, release-*]
+  workflow_dispatch:
+    inputs:
+      promote:
+        type: boolean
+        default: false
+        description: Promote release to stable (for release-* branches only)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -348,10 +557,42 @@ concurrency:
 jobs:
   release:
     uses: nepalevov/ci/.github/workflows/python_package_release.yml@main
+    with:
+      promote: ${{ github.event_name == 'workflow_dispatch' && inputs.promote }}
     secrets: inherit
 ```
 
 ### Generic Docker
+
+#### Requirements
+
+Consumer repository must have:
+
+- `Makefile` with `lint` target defined
+- `Dockerfile`
+
+`Makefile`
+
+```makefile
+.PHONY: all lint build run help
+
+all: lint build
+
+build:
+	docker build -t my-image .
+
+run:
+	docker run my-image
+
+lint:
+	docker run --rm -i hadolint/hadolint < Dockerfile
+
+help:
+	@echo '===================='
+	@echo 'lint                         - lint the Dockerfile'
+	@echo 'build                        - build docker image'
+	@echo 'run                          - run docker image'
+```
 
 #### PR Workflow
 
@@ -384,6 +625,12 @@ name: Release Workflow
 on:
   push:
     branches: [development, release-*]
+  workflow_dispatch:
+    inputs:
+      promote:
+        type: boolean
+        default: false
+        description: Promote release to stable (for release-* branches only)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -392,6 +639,8 @@ concurrency:
 jobs:
   release:
     uses: nepalevov/ci/.github/workflows/generic_docker_release.yml@main
+    with:
+      promote: ${{ github.event_name == 'workflow_dispatch' && inputs.promote }}
     secrets: inherit
 ```
 
@@ -410,6 +659,8 @@ on:
       - opened
       - edited
       - reopened
+
+permissions: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -460,6 +711,9 @@ jobs:
 
 The E2E testing system for review environments enables automated testing of pull request changes in isolated, short-lived environments. When a developer comments `/deploy-review` on a PR, the system deploys the PR code to a review environment and runs E2E tests against it.
 
+<details>
+  <summary>Flowchart diagram</summary>
+
 ```mermaid
 flowchart-elk TD
     A[Developer comments /deploy-review on PR] --> B[Slash Command Dispatch triggers repository_dispatch in nepalevov/ci]
@@ -492,6 +746,8 @@ flowchart-elk TD
 
     Q --> R[Final status updated in PR comment]
 ```
+
+</details>
 
 ###### Test Repository Structure
 
@@ -742,7 +998,7 @@ jobs:
     steps:
       - name: Dependabot metadata
         id: metadata
-        uses: dependabot/fetch-metadata@08eff52bf64351f401fb50d4972fa95b9f2c2d1b # v2.4.0
+        uses: dependabot/fetch-metadata@ffa630c65fa7e0ecfa0625b5ceda64399aea1b36 # v3.0.0
       - name: Approve PR
         run: gh pr review --approve "$PR_URL"
         env:
