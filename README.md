@@ -709,7 +709,7 @@ jobs:
 
 ##### End-to-end tests
 
-The E2E testing system for review environments enables automated testing of pull request changes in isolated, short-lived environments. When a developer comments `/deploy-review` on a PR, the system deploys the PR code to a review environment and runs E2E tests against it.
+The E2E testing system for review environments enables automated testing of pull request changes in isolated, short-lived environments. When a developer comments `/deploy-review` on a PR, the system deploys the PR code to a review environment and runs E2E tests against it. See [Skipping E2E Tests](#skipping-e2e-tests) section to disable this feature.
 
 <details>
   <summary>Flowchart diagram</summary>
@@ -760,8 +760,11 @@ A test repository must provide [composite actions](https://docs.github.com/en/ac
       action.yml <-- Composite action that runs tests
 ```
 
-> [!note]
-> The `<application>` placeholder must match the `application` value passed in `static_args` of the `slash-command-dispatch` action
+> [!important]
+> One composite action should be designed to test one application only
+
+> [!tip]
+> By default, [chat](https://github.com/epam/ai-dial-chat) tests are executed. To define custom applications (with corresponding test code sources), pass `test-applications` argument in `static_args` of the `slash-command-dispatch` action. Format: `application[:test-repository],application[:test-repository]`, e.g. `chat,admin:epam/ai-dial-admin-perf` will result in running tests from `epam/ai-dial-chat` (default tests code source) against `chat` application and tests from `epam/ai-dial-admin-perf` against `admin` application
 
 The action must have inputs:
 
@@ -776,9 +779,22 @@ Besides inputs, the action will have access to environment variables:
 - `E2E_PASSWORD`
 - `E2E_USERNAME`
 - `NEXT_PUBLIC_OVERLAY_USER_BUCKET`
+- `DIAL_ADMIN_USERS_FILE`
+- `INFLUX_HOST`
+- `INFLUX_TOKEN`
+- `AUTH0_DOMAIN`
+- `DIAL_ADMIN_CLIENT_ID`
+- `DIAL_ADMIN_CLIENT_SECRET`
+- `DIAL_ADMIN_NEXTAUTH_SECRET`
 
-> [!note]
-> One composite action should test one application only
+<details>
+  <summary>Example of composite action.yml</summary>
+
+```yml
+# TODO: add example code with checkout hint and environment variables reference example
+```
+
+</details>
 
 ###### Skipping E2E Tests
 
