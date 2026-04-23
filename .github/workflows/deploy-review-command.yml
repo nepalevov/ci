@@ -156,7 +156,7 @@ jobs:
         include: ${{ fromJson(needs.deploy-review.outputs.test-applications) }}
       fail-fast: false
     env:
-      ENVIRONMENT_URL: "https://${{ matrix.application }}-${{ github.event.client_payload.slash_command.args.named.application }}-pr-3045.gke.test.dial.parts" # HACK - hardcoded review env URL
+      ENVIRONMENT_URL: "https://${{ matrix.application }}-${{ github.event.client_payload.slash_command.args.named.application }}-pr-3071.gke.test.dial.parts" # HACK - hardcoded review env URL
     steps:
       - name: Wait for environment
         run: |
@@ -259,5 +259,5 @@ jobs:
           comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
           comment-owner: ${{ github.event.client_payload.github.payload.repository.owner.login }}
           comment-repo: ${{ github.event.client_payload.github.payload.repository.name }}
-          environment-url: "https://chat-${{ github.event.client_payload.slash_command.args.named.application }}-pr-3045.gke.test.dial.parts" # HACK - hardcoded review env URL
+          environment-url: "https://chat-${{ github.event.client_payload.slash_command.args.named.application }}-pr-3071.gke.test.dial.parts" # HACK - hardcoded review env URL
           github-token: ${{ secrets.ACTIONS_BOT_TOKEN }}
