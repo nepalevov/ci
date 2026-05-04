@@ -32,19 +32,19 @@ read_unfork_version() {
 process_files() {
     if [[ "$MODE" == "fork" ]]; then
         # 1) epam/ai-dial-ci + line ending with @*.*.* -> @main
-        find . -type f -not -path "./.git/*" -not -name "*.sh" -not -name "README.md" \
+        find . -type f -not -path "./.git/*" -not -name "fork.sh" -not -name "README.md" \
             -exec sed -E -i '/epam\/ai-dial-ci/ s/@[^[:space:]@]*\.[^[:space:]@]*\.[^[:space:]@]*$/@main/' {} +
 
         # 2) epam/ai-dial-ci -> nepalevov/ci
-        find . -type f -not -path "./.git/*" -not -name "*.sh" -not -name "README.md" \
+        find . -type f -not -path "./.git/*" -not -name "fork.sh" \
             -exec sed -i 's#epam/ai-dial-ci#nepalevov/ci#g' {} +
     else
         # 1) @main -> @<version>
-        find . -type f -not -path "./.git/*" -not -name "*.sh" -not -name "README.md" \
+        find . -type f -not -path "./.git/*" -not -name "fork.sh" -not -name "README.md" \
             -exec sed -i "s#@main#@${TARGET_VERSION}#g" {} +
 
         # 2) nepalevov/ci -> epam/ai-dial-ci
-        find . -type f -not -path "./.git/*" -not -name "*.sh" -not -name "README.md" \
+        find . -type f -not -path "./.git/*" -not -name "fork.sh" \
             -exec sed -i 's#nepalevov/ci#epam/ai-dial-ci#g' {} +
     fi
 
