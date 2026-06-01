@@ -7,6 +7,10 @@ on:
         type: boolean
         description: Promote release to stable (for release-* branches only)
         default: false
+      draft-stable-releases:
+        type: boolean
+        description: Create stable GitHub releases as drafts
+        default: false
       bypass-checks:
         type: boolean
         description: Do not fail pipeline if checks failed
@@ -47,6 +51,14 @@ on:
         type: string
         description: ORT version to use
         default: "85.0.0" # HACK: pin ORT version due to java.util.NoSuchElementException in 85.1.0
+      ort-config-repository:
+        type: string
+        description: ORT config repository to use
+        default: "https://github.com/oss-review-toolkit/ort-config.git"
+      ort-config-revision:
+        type: string
+        description: ORT config revision to use
+        default: "5650fed55a20397b9abb9017a0c6bb674dc8481d"
       docker-build-enabled:
         type: boolean
         description: "Enable Docker build"
@@ -113,6 +125,8 @@ jobs:
       ort-enabled: ${{ inputs.ort-enabled }}
       ort-bypassed: ${{ inputs.ort-bypassed }}
       ort-version: ${{ inputs.ort-version }}
+      ort-config-repository: ${{ inputs.ort-config-repository }}
+      ort-config-revision: ${{ inputs.ort-config-revision }}
       node-version: ${{ inputs.node-version }}
       runs-on: ${{ inputs.runs-on }}
 
@@ -135,8 +149,9 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     permissions:
       contents: write
-      packages: write
-      security-events: write
+      id-token: write # for trusted publishing to npmjs registry
+      packages: write # for publishing to GitHub Packages registry
+      security-events: write # for uploading Trivy SARIF report to GitHub
     needs:
       - calculate_version
       - test
@@ -215,7 +230,7 @@ jobs:
           # Steps:
           # 1. (naive) check if a package with the same version is already exists in the registry
           # 2. build the package using either `build:publishable` (useful for monorepos) or `build` script
-          # 3. publish the package using `publish` script with distribution tags:
+          # 3. publish the package using `publish:npm` script (if exists) or `npm publish` directly with distribution tags:
           #    - development branch --> `development` distribution tag
           #    - release candidate version --> `{release-line}-rc` distribution tag (e.g. `1.0-rc`)
           #    - stable version
@@ -231,15 +246,23 @@ jobs:
           else
             npm run build
           fi
+          publish_with_tag() {
+            local tag="$1"
+            if node -e "process.exit(require('./package.json').scripts?.['publish:npm'] ? 0 : 1)"; then
+              npm run publish:npm -- --tag "$tag"
+            else
+              npm publish --tag "$tag"
+            fi
+          }
           if [ "$IS_DEVELOPMENT" = "true" ]; then
-            npm run publish -- --tag "development"
+            publish_with_tag "development"
           elif [ "$IS_RELEASE_CANDIDATE" = "true" ]; then
-            npm run publish -- --tag "$RELEASE_LINE-rc"
+            publish_with_tag "$RELEASE_LINE-rc"
           elif [ "$IS_RELEASE" = "true" ]; then
             if [ "$IS_LATEST" = "true" ]; then
-              npm run publish -- --tag "latest"
+              publish_with_tag "latest"
             else
-              npm run publish -- --tag "release-$RELEASE_LINE"
+              publish_with_tag "release-$RELEASE_LINE"
             fi
           fi
         env:
@@ -256,6 +279,7 @@ jobs:
           git-user-email: ${{ vars.ACTIONS_BOT_EMAIL || '149404362+ai-dial-actions@users.noreply.github.com' }}
           tag-version: ${{ needs.calculate_version.outputs.next-version }}
           changelog-file: "/tmp/my_changelog" # comes from generate_release_notes step; TODO: beautify
+          draft-stable-releases: ${{ inputs.draft-stable-releases }}
           extra-commit-command: |
             git add package.json package-lock.json
             git commit -m '[skip ci] Update version' || true # upstream branch may already be updated
