@@ -20,10 +20,10 @@ inputs:
     default: "false"
   git-user-name:
     description: Git user name for committing changes
-    default: "ai-dial-actions"
+    default: "github-actions[bot]"
   git-user-email:
     description: Git user email for committing changes
-    default: "149404362+ai-dial-actions@users.noreply.github.com"
+    default: "41898282+github-actions[bot]@users.noreply.github.com"
 
 runs:
   using: "composite"
