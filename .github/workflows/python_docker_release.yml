@@ -183,6 +183,8 @@ jobs:
       - uses: nepalevov/ci/actions/publish_tag_release@main
         if: ${{ startsWith(github.ref, 'refs/heads/release-') }}
         with:
+          git-user-name: ${{ vars.ACTIONS_BOT_NAME }}
+          git-user-email: ${{ vars.ACTIONS_BOT_EMAIL }}
           tag-version: ${{ needs.calculate_version.outputs.next-version }}
           changelog-file: "/tmp/my_changelog" # comes from generate_release_notes step; TODO: beautify
           extra-commit-command: |
