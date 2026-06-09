@@ -81,7 +81,7 @@ runs:
           latest=false
         tags: ${{ inputs.image-tags }}
       env:
-        DOCKER_METADATA_ANNOTATIONS_LEVELS: index
+        DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
     - name: Login to GitHub Container Registry
       if: ${{ fromJSON(inputs.push-enabled) }} # workaround for composite jobs not being able to pass boolean inputs
       uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
