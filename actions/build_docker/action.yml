@@ -96,16 +96,17 @@ runs:
     #     username: ${{ inputs.dockerhub-username }}
     #     password: ${{ inputs.dockerhub-password }}
     - name: Build and export to Docker
+      # No annotations (index-level annotations not supported for single platform export)
+      # No labels (unneeded)
+      # Single platform export to the local image store (multi-platform local export is not supported by default)
       if: ${{ fromJSON(inputs.trivy-enabled) }} # workaround for composite jobs not being able to pass boolean inputs
       uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
       with:
         context: .
         file: ${{ inputs.dockerfile-path }}
         load: true
-        platforms: linux/amd64
+        platforms: linux/amd64 # Default architecture for Trivy container scanning
         tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        annotations: ${{ steps.meta.outputs.annotations }}
         secrets: |
           GPR_USERNAME=${{ inputs.gpr-username }}
           GPR_PASSWORD=${{ inputs.gpr-password }}
