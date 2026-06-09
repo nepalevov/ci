@@ -76,8 +76,9 @@ runs:
       uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6.1.0
       with:
         images: ${{ inputs.image-names }}
+        # Never add `latest` tag automatically; instead pass a tag (or tag rule) to `image-tags` input if needed
         flavor: |
-          latest=false # Never add `latest` tag automatically; instead pass a tag (or tag rule) to `image-tags` input if needed
+          latest=false
         tags: ${{ inputs.image-tags }}
       env:
         DOCKER_METADATA_ANNOTATIONS_LEVELS: index
