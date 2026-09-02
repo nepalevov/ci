@@ -1357,7 +1357,12 @@ ORT is configured on two levels: a shared **global config repository** and a per
 
 ###### Global config repository
 
-Holds org-wide policy rules, license classifications, curations and resolutions shared across all repositories. Controlled via workflow inputs (or repository variables):
+Holds org-wide policy rules, license classifications, curations and resolutions shared across all repositories.
+
+> [!note]
+> We've forked [the upstream](https://github.com/oss-review-toolkit/ort-config) at [epam/ai-dial-ort-config](https://github.com/epam/ai-dial-ort-config) and maintain it with our own policy rules and additional curations.
+
+ Controlled via workflow inputs (or repository variables):
 
 | Workflow Input          | Repository variable       | Default                                          |
 | ----------------------- | ------------------------- | ------------------------------------------------ |
@@ -1371,7 +1376,7 @@ Holds org-wide policy rules, license classifications, curations and resolutions 
 
 Add an `.ort.yml` to the repository root for [project-specific configuration](https://oss-review-toolkit.org/ort/docs/configuration/ort-yml). For example:
 
-- exclude dev/test dependencies and build tooling scopes, which are not included in distributed build:
+- to exclude dev/test dependencies and build tooling scopes, which are not included in distributed build, thus not relevant for license compliance checks:
 
   <details>
     <summary>Node (npm)</summary>
@@ -1439,7 +1444,7 @@ Add an `.ort.yml` to the repository root for [project-specific configuration](ht
 
   </details>
 
-- [resolve policy rule violations](https://oss-review-toolkit.org/ort/docs/configuration/ort-yml#resolving-policy-rule-violations) that can't be fixed, matching the violation `message` with a regular expression:
+- to resolve [policy rule violations](https://oss-review-toolkit.org/ort/docs/configuration/ort-yml#resolving-policy-rule-violations) that can't be fixed, by matching the violation `message` with a regular expression:
 
   <details>
     <summary>Python (Poetry)</summary>
@@ -1456,9 +1461,9 @@ Add an `.ort.yml` to the repository root for [project-specific configuration](ht
   </details>
 
   > [!tip]
-  > Prefer adding [package curations](https://oss-review-toolkit.org/ort/docs/configuration/package-curations) over resolving violations when `NO_LICENSE_IN_DEPENDENCY` is reported
+  > Prefer adding [package curations](https://oss-review-toolkit.org/ort/docs/configuration/package-curations) over resolving violations when `NO_LICENSE_IN_DEPENDENCY` (or other fixable) findings are reported. To do that, create a new issue in [epam/ai-dial-ort-config](https://github.com/epam/ai-dial-ort-config) repository with error message(s) from the ORT scan report.
 
-- set [package-manager-specific](https://oss-review-toolkit.org/ort/docs/category/package-managers) options. Each package manager defines its own options, e.g.:
+- to set [package-manager-specific](https://oss-review-toolkit.org/ort/docs/category/package-managers) options. Each package manager defines its own options, e.g.:
 
   <details>
     <summary>Node (npm)</summary>
