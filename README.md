@@ -1359,13 +1359,13 @@ ORT is configured on two levels: a shared **global config repository** and a per
 
 Holds org-wide policy rules, license classifications, curations and resolutions shared across all repositories. Controlled via workflow inputs (or repository variables):
 
-| Workflow Input          | Repository variable       | Default                                                |
-| ----------------------- | ------------------------- | ------------------------------------------------------ |
-| `ort-config-repository` | `ORT_CONFIG_VCS_URL`      | `https://github.com/oss-review-toolkit/ort-config.git` |
-| `ort-config-revision`   | `ORT_CONFIG_VCS_REVISION` | Git SHA matching the pinned `ort-version`              |
+| Workflow Input          | Repository variable       | Default                                          |
+| ----------------------- | ------------------------- | ------------------------------------------------ |
+| `ort-config-repository` | `ORT_CONFIG_VCS_URL`      | `https://github.com/epam/ai-dial-ort-config.git` |
+| `ort-config-revision`   | `ORT_CONFIG_VCS_REVISION` | Git tag matching the pinned `ort-version`        |
 
 > [!important]
-> `ort-config-revision` must point to a SHA where `org.ossreviewtoolkit:version-catalog` version matches `ort-version` in use - the config schema evolves with ORT, so a mismatched revision can break the scan. When bumping one, bump the other too.
+> `ort-config-revision` must point to a git reference (SHA/tag/branch) where `org.ossreviewtoolkit:version-catalog` version matches `ort-version` in use - the config schema evolves with ORT, so a mismatched revision can break the scan. When bumping one, bump the other too.
 
 ###### .ort.yml
 
@@ -1448,12 +1448,9 @@ Add an `.ort.yml` to the repository root for [project-specific configuration](ht
   ---
   resolutions:
     rule_violations:
-      # NVIDIA CUDA runtime libraries are distributed under the proprietary "NVIDIA Proprietary Software" / CUDA EULA license. There is no SPDX
-      # identifier for it that is covered by the policy rules, and it is not possible to conclude a custom LicenseRef- without it being flagged as an
-      # unhandled license. These are therefore resolved as can't-fix exceptions.
-      - message: ".*PyPI::nvidia-cu.*"
-        reason: "CANT_FIX_EXCEPTION"
-        comment: "NVIDIA Proprietary Software, see https://docs.nvidia.com/cuda/eula/index.html"
+      - message: ".*LicenseRef-scancode-nvidia-cuda-supplement-2020.*"
+        reason: "LICENSE_ACQUIRED_EXCEPTION"
+        comment: "NVIDIA CUDA supplemental license reviewed and approved for use in this project."
   ```
 
   </details>
