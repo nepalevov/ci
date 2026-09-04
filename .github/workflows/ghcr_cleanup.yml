@@ -1,0 +1,78 @@
+name: GHCR Cleanup
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Log what would be deleted without making changes.
+        type: boolean
+        default: true
+      validate:
+        description: After cleanup, verify all multi-arch images have their platform children.
+        type: boolean
+        default: false
+
+jobs:
+  cleanup:
+    name: Cleanup ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    # Not safe to run in parallel against the same package.
+    concurrency:
+      group: ghcr-cleanup-${{ matrix.package }}
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        package:
+          - ai-dial-admin-backend
+          - ai-dial-admin-frontend
+          - ai-dial-chat
+          - ai-dial-quickapps-backend
+          - ai-dial-core
+          - ai-dial-adapter-openai
+          - ai-dial-adapter-bedrock
+          - ai-dial-adapter-vertexai
+          - ai-dial-chat-themes
+          - ai-dial-analytics-realtime
+          - ai-dial-adapter-dial
+          - ai-dial-rag
+          - ai-dial-mind-map-frontend
+          - ai-dial-assistant
+          - ai-dial-auth-helper
+          - ai-dial-app-controller
+          - ai-dial-log-parser
+          - ai-dial-deployment-manager-mcp-proxy
+          - ai-dial-admin-deployment-manager-backend
+          - ai-dial-code-interpreter
+          - ai-dial-bing-grounding
+          - ai-dial-app-builder-python
+          - ai-dial-mind-map-backend
+          - ai-dial-admin-evaluation-framework-backend
+          - ai-dial-interceptor-microsoft
+          - dial-mind-map-backend
+          - ai-dial-quickapps-frontend
+          - ai-dial-generic-rag-backend
+          - dial-mind-map-frontend
+          - ai-dial-memory-backend
+          - qgbot
+          - backend
+          - ai-dial-admin-evaluation-metrics
+          - frontend
+          - ai-dial-deep-research-backend
+          - ai-dial-generic-rag-frontend
+          - ai-dial-openapi-to-mcp
+    steps:
+      - name: Cleanup untagged images
+        uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
+        with:
+          # A classic PAT with write:packages + delete:packages is required
+          # because the packages live in a different org than this repository.
+          token: ${{ secrets.ACTIONS_BOT_TOKEN }}
+          owner: epam
+          package: ${{ matrix.package }}
+          delete-untagged: true
+          delete-ghost-images: false
+          delete-orphaned-images: false
+          delete-partial-images: false
+          dry-run: ${{ inputs.dry-run }}
+          validate: ${{ inputs.validate }}
