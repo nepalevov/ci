@@ -3,27 +3,10 @@ name: GHCR Cleanup
 on:
   workflow_dispatch:
     inputs:
-      dry-run:
-        description: Log what would be deleted without making changes.
-        type: boolean
-        default: true
-      validate:
-        description: After cleanup, verify all multi-arch images have their platform children.
-        type: boolean
-        default: false
-
-jobs:
-  cleanup:
-    name: Cleanup ${{ matrix.package }}
-    runs-on: ubuntu-latest
-    # Not safe to run in parallel against the same package.
-    concurrency:
-      group: ghcr-cleanup-${{ matrix.package }}
-    strategy:
-      fail-fast: false
-      max-parallel: 4
-      matrix:
-        package:
+      package:
+        description: package
+        type: choice
+        options:
           - ai-dial-admin-backend
           - ai-dial-admin-frontend
           - ai-dial-chat
@@ -54,13 +37,41 @@ jobs:
           - ai-dial-generic-rag-backend
           - dial-mind-map-frontend
           - ai-dial-memory-backend
-          - qgbot
-          - backend
+          - dial-xl/qgbot
+          - dial-xl/backend
           - ai-dial-admin-evaluation-metrics
-          - frontend
+          - dial-xl/frontend
           - ai-dial-deep-research-backend
           - ai-dial-generic-rag-frontend
           - ai-dial-openapi-to-mcp
+      dry-run:
+        description: dry-run
+        type: boolean
+        default: true
+      validate:
+        description: validate
+        type: boolean
+        default: false
+      delete-ghost-images:
+        description: delete-ghost-images
+        type: boolean
+        default: false
+      delete-orphaned-images:
+        description: delete-orphaned-images
+        type: boolean
+        default: false
+      delete-partial-images:
+        description: delete-partial-images
+        type: boolean
+        default: false
+
+jobs:
+  cleanup:
+    name: Cleanup ${{ inputs.package }}
+    runs-on: ubuntu-latest
+    # Not safe to run in parallel against the same package.
+    concurrency:
+      group: ghcr-cleanup-${{ inputs.package }}
     steps:
       - name: Cleanup untagged images
         uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
@@ -69,10 +80,10 @@ jobs:
           # because the packages live in a different org than this repository.
           token: ${{ secrets.ACTIONS_BOT_TOKEN }}
           owner: epam
-          package: ${{ matrix.package }}
+          package: ${{ inputs.package }}
           delete-untagged: true
-          delete-ghost-images: false
-          delete-orphaned-images: false
-          delete-partial-images: false
+          delete-ghost-images: ${{ inputs.delete-ghost-images }}
+          delete-orphaned-images: ${{ inputs.delete-orphaned-images }}
+          delete-partial-images: ${{ inputs.delete-partial-images }}
           dry-run: ${{ inputs.dry-run }}
           validate: ${{ inputs.validate }}
