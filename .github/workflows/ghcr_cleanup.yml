@@ -44,12 +44,17 @@ on:
           - ai-dial-deep-research-backend
           - ai-dial-generic-rag-frontend
           - ai-dial-openapi-to-mcp
+          - all
       dry-run:
         description: dry-run
         type: boolean
         default: true
       validate:
         description: validate
+        type: boolean
+        default: false
+      delete-untagged:
+        description: delete-untagged
         type: boolean
         default: false
       delete-ghost-images:
@@ -66,12 +71,39 @@ on:
         default: false
 
 jobs:
+  build-matrix:
+    name: Build package matrix
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.matrix.outputs.packages }}
+    steps:
+      - name: Build matrix from input
+        id: matrix
+        env:
+          SELECTED: ${{ inputs.package }}
+        run: |
+          set -euo pipefail
+          all='["ai-dial-admin-backend","ai-dial-admin-frontend","ai-dial-chat","ai-dial-quickapps-backend","ai-dial-core","ai-dial-adapter-openai","ai-dial-adapter-bedrock","ai-dial-adapter-vertexai","ai-dial-chat-themes","ai-dial-analytics-realtime","ai-dial-adapter-dial","ai-dial-rag","ai-dial-mind-map-frontend","ai-dial-assistant","ai-dial-auth-helper","ai-dial-app-controller","ai-dial-log-parser","ai-dial-deployment-manager-mcp-proxy","ai-dial-admin-deployment-manager-backend","ai-dial-code-interpreter","ai-dial-bing-grounding","ai-dial-app-builder-python","ai-dial-mind-map-backend","ai-dial-admin-evaluation-framework-backend","ai-dial-interceptor-microsoft","dial-mind-map-backend","ai-dial-quickapps-frontend","ai-dial-generic-rag-backend","dial-mind-map-frontend","ai-dial-memory-backend","dial-xl/qgbot","dial-xl/backend","ai-dial-admin-evaluation-metrics","dial-xl/frontend","ai-dial-deep-research-backend","ai-dial-generic-rag-frontend","ai-dial-openapi-to-mcp"]'
+          if [ "${SELECTED}" = "all" ]; then
+            packages="${all}"
+          else
+            packages=$(jq -n -c --arg p "${SELECTED}" '[$p]')
+          fi
+          echo "packages=${packages}" >> "${GITHUB_OUTPUT}"
+          echo "Packages to clean up: ${packages}"
+
   cleanup:
-    name: Cleanup ${{ inputs.package }}
+    name: Cleanup ${{ matrix.package }}
+    needs: build-matrix
     runs-on: ubuntu-latest
     # Not safe to run in parallel against the same package.
     concurrency:
-      group: ghcr-cleanup-${{ inputs.package }}
+      group: ghcr-cleanup-${{ matrix.package }}
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        package: ${{ fromJson(needs.build-matrix.outputs.packages) }}
     steps:
       - name: Cleanup untagged images
         uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
@@ -80,8 +112,8 @@ jobs:
           # because the packages live in a different org than this repository.
           token: ${{ secrets.ACTIONS_BOT_TOKEN }}
           owner: epam
-          package: ${{ inputs.package }}
-          delete-untagged: true
+          package: ${{ matrix.package }}
+          delete-untagged: ${{ inputs.delete-untagged }}
           delete-ghost-images: ${{ inputs.delete-ghost-images }}
           delete-orphaned-images: ${{ inputs.delete-orphaned-images }}
           delete-partial-images: ${{ inputs.delete-partial-images }}
