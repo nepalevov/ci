@@ -41,7 +41,7 @@
         - [End-to-end tests](#end-to-end-tests)
           - [Test Repository Structure](#test-repository-structure)
           - [Skipping E2E Tests](#skipping-e2e-tests)
-      - [Cleanup for untagged images in GHCR](#cleanup-for-untagged-images-in-ghcr)
+      - [Cleanup untagged images in GHCR](#cleanup-untagged-images-in-ghcr)
       - [Trigger deployment of development environment in GitLab](#trigger-deployment-of-development-environment-in-gitlab)
       - [Trivy additional configuration](#trivy-additional-configuration)
       - [Dependabot](#dependabot)
@@ -378,7 +378,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-telemetry: true
           disable-sudo-and-containers: true
@@ -428,7 +428,7 @@ jobs:
         with:
           dependency-graph: download-and-submit
       - id: dependency-review
-        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           retry-on-snapshot-warnings: true
           retry-on-snapshot-warnings-timeout: 600 # let GitHub process both graphs up to 10 minutes
@@ -444,7 +444,7 @@ jobs:
           EOF
       - if: ${{ steps.dependency-review.outputs.comment-content != null }}
         # Use separate action to comment because the original one can't do it without PR context
-        uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0 # v3.0.4
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
         with:
           number: ${{ steps.get-pr.outputs.number }}
           header: dependency-review
@@ -453,7 +453,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.ACTIONS_BOT_TOKEN }}
       - if: failure()
         # If the review fails, we still want to "outdate" the comment to avoid stale information
-        uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0 # v3.0.4
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
         with:
           number: ${{ steps.get-pr.outputs.number }}
           header: dependency-review
@@ -1057,7 +1057,7 @@ runs:
   steps:
     # Checkout repository with test source code into a separate directory
     # Never use default path, otherwise you'll overwrite action code and parent workflow will fail to complete
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         repository: ${{ inputs.test-repository }}
         ref: ${{ inputs.test-branch }}
@@ -1073,7 +1073,7 @@ runs:
     # Example of saving test artifacts
     - name: Upload test artifacts
       if: always()
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ inputs.report-prefix }}-test-artifacts
         path: |
@@ -1099,7 +1099,12 @@ If you need to disable E2E tests execution:
 - for the **specific PR**: assign `skip-e2e` label to PR
 - **once**: use `/deploy-review skip-e2e` command in PR comment
 
-#### Cleanup for untagged images in GHCR
+#### Cleanup untagged images in GHCR
+
+When using "rolling" tags for container images, like `development` or `latest`, the GitHub Container Registry (GHCR) will accumulate untagged images over time. Since they're essentially useless, it's a good practice to clean them up periodically. The workflow below will delete untagged images from GHCR once a day.
+
+> [!important]
+> The workflow uses `GITHUB_TOKEN` to authenticate with GHCR by default, therefore requires **Admin** [package permissions](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility#github-actions-access-for-packages-scoped-to-organizations) granted to the repository.
 
 `cleanup-untagged-images.yml`
 
@@ -1117,9 +1122,12 @@ jobs:
     permissions:
       packages: write
     steps:
-      - uses: dataaxiom/ghcr-cleanup-action@cd0cdb900b5dbf3a6f2cc869f0dbb0b8211f50c4 # v1.0.16
+      - uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
         with:
           delete-untagged: true
+          delete-ghost-images: true # Delete indexes with no manifests
+          delete-partial-images: true # Delete indexes which refer to at least one non-existent manifest
+          delete-orphaned-images: true # Delete dangling referrers, e.g. SBOMs, signatures, etc. that refer to non-existent digest
 ```
 
 #### Trigger deployment of development environment in GitLab
@@ -1303,8 +1311,9 @@ jobs:
     steps:
       - name: Dependabot metadata
         id: metadata
-        uses: dependabot/fetch-metadata@ffa630c65fa7e0ecfa0625b5ceda64399aea1b36 # v3.0.0
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
       - name: Approve PR
+        if: steps.metadata.outputs.update-type != 'version-update:semver-major'
         run: gh pr review --approve "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
