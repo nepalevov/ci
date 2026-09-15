@@ -201,6 +201,9 @@ Consumer repository **must** have:
 
 #### PR Workflow
 
+<!-- action-docs-inputs source=".github/workflows/node_pr.yml" -->
+<!-- action-docs-inputs source=".github/workflows/node_pr.yml" -->
+
 `pr.yml`
 
 ```yml
@@ -281,6 +284,9 @@ Consumer repository **must** have:
   </details>
 
 #### PR Workflow (Docker)
+
+<!-- action-docs-inputs source=".github/workflows/java_pr.yml" -->
+<!-- action-docs-inputs source=".github/workflows/java_pr.yml" -->
 
 `pr.yml`
 
@@ -524,6 +530,9 @@ Consumer repository **must** have:
 
 #### PR Workflow (Docker)
 
+<!-- action-docs-inputs source=".github/workflows/python_docker_pr.yml" -->
+<!-- action-docs-inputs source=".github/workflows/python_docker_pr.yml" -->
+
 `pr.yml`
 
 ```yml
@@ -576,6 +585,9 @@ jobs:
 > See [Docker Hub image visibility](#docker-hub-image-visibility) for image visibility caveats.
 
 #### PR Workflow (package)
+
+<!-- action-docs-inputs source=".github/workflows/python_package_pr.yml" -->
+<!-- action-docs-inputs source=".github/workflows/python_package_pr.yml" -->
 
 `pr.yml`
 
@@ -835,6 +847,9 @@ Consumer repository **must** have:
 - `Dockerfile`
 
 #### PR Workflow
+
+<!-- action-docs-inputs source=".github/workflows/generic_docker_pr.yml" -->
+<!-- action-docs-inputs source=".github/workflows/generic_docker_pr.yml" -->
 
 `pr.yml`
 

@@ -8,3 +8,23 @@ repos:
       - id: check-added-large-files
       - id: check-executables-have-shebangs
       - id: mixed-line-ending
+
+  - repo: local
+    hooks:
+      - id: action-docs
+        name: Auto-generate reusable workflow documentation
+        language: node
+        additional_dependencies:
+          - "action-docs"
+        # Regenerate whenever a workflow definition or the README changes.
+        files: '^\.github/workflows/.*\.ya?ml$|^README\.md$'
+        pass_filenames: false
+        # HACK: `action-docs` only works with single source at a time, so we loop over every source referenced in the README.md (no hardcoded file list)
+        entry: >-
+          bash -c '
+          set -euo pipefail;
+          mapfile -t sources < <(grep -oP "<!-- action-docs-[a-z]+ source=\"\K[^\"]+" README.md | sort -u);
+          for src in "${sources[@]}"; do
+            echo "Processing: $src";
+            action-docs --update-readme README.md --source "$src" --no-banner --toc-level 5;
+          done'
