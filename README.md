@@ -202,6 +202,33 @@ Consumer repository **must** have:
 #### PR Workflow
 
 <!-- action-docs-inputs source=".github/workflows/node_pr.yml" -->
+##### Inputs
+
+| name | description | type | required | default |
+| --- | --- | --- | --- | --- |
+| `bypass-checks` | <p>Do not fail pipeline if checks failed</p> | `boolean` | `false` | `false` |
+| `format-checks-enabled` | <p>Enable format_checks</p> | `boolean` | `false` | `true` |
+| `format-checks-bypassed` | <p>Do not fail pipeline if format_checks failed</p> | `boolean` | `false` | `false` |
+| `style-checks-enabled` | <p>Enable style_checks</p> | `boolean` | `false` | `true` |
+| `style-checks-bypassed` | <p>Do not fail pipeline if style_checks failed</p> | `boolean` | `false` | `false` |
+| `code-checks-enabled` | <p>Enable code_checks</p> | `boolean` | `false` | `true` |
+| `code-checks-bypassed` | <p>Do not fail pipeline if code_checks failed</p> | `boolean` | `false` | `false` |
+| `ort-enabled` | <p>Enable ORT scanning</p> | `boolean` | `false` | `true` |
+| `ort-bypassed` | <p>Do not fail pipeline if ORT scan failed</p> | `boolean` | `false` | `false` |
+| `ort-version` | <p>ORT version to use</p> | `string` | `false` | `92.5.0` |
+| `ort-config-repository` | <p>ORT config repository to use</p> | `string` | `false` | `${{ vars.ORT_CONFIG_VCS_URL || 'https://github.com/epam/ai-dial-ort-config.git' }}` |
+| `ort-config-revision` | <p>ORT config revision to use</p> | `string` | `false` | `${{ vars.ORT_CONFIG_VCS_REVISION || '92.5.0' }}` |
+| `docker-build-enabled` | <p>Enable Docker build</p> | `boolean` | `false` | `true` |
+| `trivy-enabled` | <p>Enable Trivy scanning</p> | `boolean` | `false` | `true` |
+| `trivy-bypassed` | <p>Do not fail pipeline if Trivy failed</p> | `boolean` | `false` | `false` |
+| `trivy-severity` | <p>Severities of vulnerabilities to fail the build</p> | `string` | `false` | `CRITICAL,HIGH` |
+| `trivy-severity-for-sarif` | <p>Severities of vulnerabilities in SARIF report</p> | `string` | `false` | `CRITICAL,HIGH` |
+| `trivy-limit-severities-for-sarif` | <p>By default SARIF format enforces output of all vulnerabilities regardless of configured severities. To override this behavior set this parameter to true and specify desired severities in the <code>trivy-severity-for-sarif</code> parameter</p> | `boolean` | `false` | `true` |
+| `node-version` | <p>NodeJS version to use</p> | `string` | `false` | `22` |
+| `maximize-build-space` | <p>Maximize build space by removing unwanted software</p> | `boolean` | `false` | `false` |
+| `runs-on` | <p>Overrides jobs runs-on settings (json-encoded list)</p> | `string` | `false` | `["ubuntu-24.04"]` |
+| `platforms` | <p>Docker build platforms</p> | `string` | `false` | `linux/amd64` |
+| `dockerfile-path` | <p>Path to the Dockerfile (default: ./Dockerfile)</p> | `string` | `false` | `Dockerfile` |
 <!-- action-docs-inputs source=".github/workflows/node_pr.yml" -->
 
 `pr.yml`
@@ -286,6 +313,30 @@ Consumer repository **must** have:
 #### PR Workflow (Docker)
 
 <!-- action-docs-inputs source=".github/workflows/java_pr.yml" -->
+##### Inputs
+
+| name | description | type | required | default |
+| --- | --- | --- | --- | --- |
+| `bypass-checks` | <p>Do not fail pipeline if checks failed</p> | `boolean` | `false` | `false` |
+| `style-checks-enabled` | <p>Enable style_checks</p> | `boolean` | `false` | `true` |
+| `style-checks-bypassed` | <p>Do not fail pipeline if style_checks failed</p> | `boolean` | `false` | `false` |
+| `code-checks-enabled` | <p>Enable code_checks</p> | `boolean` | `false` | `true` |
+| `code-checks-bypassed` | <p>Do not fail pipeline if code_checks failed</p> | `boolean` | `false` | `false` |
+| `ort-enabled` | <p>Enable ORT scanning</p> | `boolean` | `false` | `true` |
+| `ort-bypassed` | <p>Do not fail pipeline if ORT scan failed</p> | `boolean` | `false` | `false` |
+| `ort-version` | <p>ORT version to use</p> | `string` | `false` | `92.5.0` |
+| `ort-config-repository` | <p>ORT config repository to use</p> | `string` | `false` | `${{ vars.ORT_CONFIG_VCS_URL || 'https://github.com/epam/ai-dial-ort-config.git' }}` |
+| `ort-config-revision` | <p>ORT config revision to use</p> | `string` | `false` | `${{ vars.ORT_CONFIG_VCS_REVISION || '92.5.0' }}` |
+| `trivy-enabled` | <p>Enable Trivy scanning</p> | `boolean` | `false` | `true` |
+| `trivy-bypassed` | <p>Do not fail pipeline if Trivy failed</p> | `boolean` | `false` | `false` |
+| `trivy-severity` | <p>Severities of vulnerabilities to fail the build</p> | `string` | `false` | `CRITICAL,HIGH` |
+| `trivy-severity-for-sarif` | <p>Severities of vulnerabilities in SARIF report</p> | `string` | `false` | `CRITICAL,HIGH` |
+| `trivy-limit-severities-for-sarif` | <p>By default SARIF format enforces output of all vulnerabilities regardless of configured severities. To override this behavior set this parameter to true and specify desired severities in the <code>trivy-severity-for-sarif</code> parameter</p> | `boolean` | `false` | `true` |
+| `java-version` | <p>Java version to use</p> | `string` | `false` | `17` |
+| `java-distribution` | <p>Java distribution to use</p> | `string` | `false` | `temurin` |
+| `maximize-build-space` | <p>Maximize build space by removing unwanted software</p> | `boolean` | `false` | `false` |
+| `runs-on` | <p>Overrides jobs runs-on settings (json-encoded list)</p> | `string` | `false` | `["ubuntu-24.04"]` |
+| `platforms` | <p>Docker build platforms</p> | `string` | `false` | `linux/amd64` |
 <!-- action-docs-inputs source=".github/workflows/java_pr.yml" -->
 
 `pr.yml`
@@ -531,6 +582,32 @@ Consumer repository **must** have:
 #### PR Workflow (Docker)
 
 <!-- action-docs-inputs source=".github/workflows/python_docker_pr.yml" -->
+##### Inputs
+
+| name | description | type | required | default |
+| --- | --- | --- | --- | --- |
+| `bypass-checks` | <p>Do not fail pipeline if checks failed</p> | `boolean` | `false` | `false` |
+| `style-checks-enabled` | <p>Enable style_checks</p> | `boolean` | `false` | `true` |
+| `style-checks-bypassed` | <p>Do not fail pipeline if style_checks failed</p> | `boolean` | `false` | `false` |
+| `code-checks-enabled` | <p>Enable code_checks</p> | `boolean` | `false` | `true` |
+| `code-checks-bypassed` | <p>Do not fail pipeline if code_checks failed</p> | `boolean` | `false` | `false` |
+| `ort-enabled` | <p>Enable ORT scanning</p> | `boolean` | `false` | `true` |
+| `ort-bypassed` | <p>Do not fail pipeline if ORT scan failed</p> | `boolean` | `false` | `false` |
+| `ort-version` | <p>ORT version to use</p> | `string` | `false` | `92.5.0` |
+| `ort-config-repository` | <p>ORT config repository to use</p> | `string` | `false` | `${{ vars.ORT_CONFIG_VCS_URL || 'https://github.com/epam/ai-dial-ort-config.git' }}` |
+| `ort-config-revision` | <p>ORT config revision to use</p> | `string` | `false` | `${{ vars.ORT_CONFIG_VCS_REVISION || '92.5.0' }}` |
+| `trivy-enabled` | <p>Enable Trivy scanning</p> | `boolean` | `false` | `true` |
+| `trivy-bypassed` | <p>Do not fail pipeline if Trivy failed</p> | `boolean` | `false` | `false` |
+| `trivy-severity` | <p>Severities of vulnerabilities to fail the build</p> | `string` | `false` | `CRITICAL,HIGH` |
+| `trivy-severity-for-sarif` | <p>Severities of vulnerabilities in SARIF report</p> | `string` | `false` | `CRITICAL,HIGH` |
+| `trivy-limit-severities-for-sarif` | <p>By default SARIF format enforces output of all vulnerabilities regardless of configured severities. To override this behavior set this parameter to true and specify desired severities in the <code>trivy-severity-for-sarif</code> parameter</p> | `boolean` | `false` | `true` |
+| `python-version` | <p>Python version to use</p> | `string` | `false` | `3.11` |
+| `python-package-manager` | <p>Python package manager to use</p> | `string` | `false` | `poetry` |
+| `poetry-version` | <p>Poetry version to use</p> | `string` | `false` | `1.8.5` |
+| `uv-version` | <p>UV version to use</p> | `string` | `false` | `0.11.30` |
+| `maximize-build-space` | <p>Maximize build space by removing unwanted software</p> | `boolean` | `false` | `false` |
+| `runs-on` | <p>Overrides jobs runs-on settings (json-encoded list)</p> | `string` | `false` | `["ubuntu-24.04"]` |
+| `platforms` | <p>Docker build platforms</p> | `string` | `false` | `linux/amd64` |
 <!-- action-docs-inputs source=".github/workflows/python_docker_pr.yml" -->
 
 `pr.yml`
@@ -587,6 +664,31 @@ jobs:
 #### PR Workflow (package)
 
 <!-- action-docs-inputs source=".github/workflows/python_package_pr.yml" -->
+##### Inputs
+
+| name | description | type | required | default |
+| --- | --- | --- | --- | --- |
+| `bypass-checks` | <p>Do not fail pipeline if checks failed</p> | `boolean` | `false` | `false` |
+| `style-checks-enabled` | <p>Enable style_checks</p> | `boolean` | `false` | `true` |
+| `style-checks-bypassed` | <p>Do not fail pipeline if style_checks failed</p> | `boolean` | `false` | `false` |
+| `code-checks-enabled` | <p>Enable code_checks</p> | `boolean` | `false` | `true` |
+| `code-checks-bypassed` | <p>Do not fail pipeline if code_checks failed</p> | `boolean` | `false` | `false` |
+| `code-checks-python-versions` | <p>Python versions to run tests against</p> | `string` | `false` | `["3.8", "3.9", "3.10", "3.11"]` |
+| `ort-enabled` | <p>Enable ORT scanning</p> | `boolean` | `false` | `true` |
+| `ort-bypassed` | <p>Do not fail pipeline if ORT scan failed</p> | `boolean` | `false` | `false` |
+| `ort-version` | <p>ORT version to use</p> | `string` | `false` | `92.5.0` |
+| `ort-config-repository` | <p>ORT config repository to use</p> | `string` | `false` | `${{ vars.ORT_CONFIG_VCS_URL || 'https://github.com/epam/ai-dial-ort-config.git' }}` |
+| `ort-config-revision` | <p>ORT config revision to use</p> | `string` | `false` | `${{ vars.ORT_CONFIG_VCS_REVISION || '92.5.0' }}` |
+| `trivy-enabled` | <p>Enable Trivy scanning</p> | `boolean` | `false` | `true` |
+| `trivy-bypassed` | <p>Do not fail pipeline if Trivy failed</p> | `boolean` | `false` | `false` |
+| `trivy-severity` | <p>Severities of vulnerabilities to fail the build</p> | `string` | `false` | `CRITICAL,HIGH` |
+| `trivy-severity-for-sarif` | <p>Severities of vulnerabilities in SARIF report</p> | `string` | `false` | `CRITICAL,HIGH` |
+| `trivy-limit-severities-for-sarif` | <p>By default SARIF format enforces output of all vulnerabilities regardless of configured severities. To override this behavior set this parameter to true and specify desired severities in the <code>trivy-severity-for-sarif</code> parameter</p> | `boolean` | `false` | `true` |
+| `python-version` | <p>Python version to use</p> | `string` | `false` | `3.11` |
+| `python-package-manager` | <p>Python package manager to use</p> | `string` | `false` | `poetry` |
+| `poetry-version` | <p>Poetry version to use</p> | `string` | `false` | `1.8.5` |
+| `uv-version` | <p>UV version to use</p> | `string` | `false` | `0.11.30` |
+| `runs-on` | <p>Overrides jobs runs-on settings (json-encoded list)</p> | `string` | `false` | `["ubuntu-24.04"]` |
 <!-- action-docs-inputs source=".github/workflows/python_package_pr.yml" -->
 
 `pr.yml`
@@ -849,6 +951,26 @@ Consumer repository **must** have:
 #### PR Workflow
 
 <!-- action-docs-inputs source=".github/workflows/generic_docker_pr.yml" -->
+##### Inputs
+
+| name | description | type | required | default |
+| --- | --- | --- | --- | --- |
+| `bypass-checks` | <p>Do not fail pipeline if checks failed</p> | `boolean` | `false` | `false` |
+| `style-checks-enabled` | <p>Enable style_checks</p> | `boolean` | `false` | `true` |
+| `style-checks-bypassed` | <p>Do not fail pipeline if style_checks failed</p> | `boolean` | `false` | `false` |
+| `ort-enabled` | <p>Enable ORT scanning</p> | `boolean` | `false` | `true` |
+| `ort-bypassed` | <p>Do not fail pipeline if ORT scan failed</p> | `boolean` | `false` | `false` |
+| `ort-version` | <p>ORT version to use</p> | `string` | `false` | `92.5.0` |
+| `ort-config-repository` | <p>ORT config repository to use</p> | `string` | `false` | `${{ vars.ORT_CONFIG_VCS_URL || 'https://github.com/epam/ai-dial-ort-config.git' }}` |
+| `ort-config-revision` | <p>ORT config revision to use</p> | `string` | `false` | `${{ vars.ORT_CONFIG_VCS_REVISION || '92.5.0' }}` |
+| `trivy-enabled` | <p>Enable Trivy scanning</p> | `boolean` | `false` | `true` |
+| `trivy-bypassed` | <p>Do not fail pipeline if Trivy failed</p> | `boolean` | `false` | `false` |
+| `trivy-severity` | <p>Severities of vulnerabilities to fail the build</p> | `string` | `false` | `CRITICAL,HIGH` |
+| `trivy-severity-for-sarif` | <p>Severities of vulnerabilities in SARIF report</p> | `string` | `false` | `CRITICAL,HIGH` |
+| `trivy-limit-severities-for-sarif` | <p>By default SARIF format enforces output of all vulnerabilities regardless of configured severities. To override this behavior set this parameter to true and specify desired severities in the <code>trivy-severity-for-sarif</code> parameter</p> | `boolean` | `false` | `true` |
+| `maximize-build-space` | <p>Maximize build space by removing unwanted software</p> | `boolean` | `false` | `false` |
+| `runs-on` | <p>Overrides jobs runs-on settings (json-encoded list)</p> | `string` | `false` | `["ubuntu-24.04"]` |
+| `platforms` | <p>Docker build platforms</p> | `string` | `false` | `linux/amd64` |
 <!-- action-docs-inputs source=".github/workflows/generic_docker_pr.yml" -->
 
 `pr.yml`
