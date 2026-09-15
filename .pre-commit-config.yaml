@@ -12,7 +12,7 @@ repos:
   - repo: local
     hooks:
       - id: action-docs
-        name: Auto-generate reusable workflow documentation
+        name: Auto-generate GitHub workflows/actions documentation
         language: node
         additional_dependencies:
           - "action-docs"

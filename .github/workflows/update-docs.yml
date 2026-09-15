@@ -1,4 +1,4 @@
-name: Verify Workflow Documentation
+name: Update Documentation
 
 on:
   pull_request:
@@ -33,7 +33,8 @@ jobs:
       - name: Install pre-commit
         run: pip install pre-commit
       - name: Run action-docs hook
-        run: pre-commit run action-docs --all-files
+        run: pre-commit run action-docs --all-files --show-diff-on-failure
+        continue-on-error: true # pre-commit exits non-zero when a hook modifies files. That is expected here
       - name: update-documentation
         uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7.2.0
         with:
