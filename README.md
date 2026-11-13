@@ -18,6 +18,7 @@
       - [Requirements](#requirements-1)
       - [PR Workflow (Docker)](#pr-workflow-docker)
       - [Release Workflow (Docker)](#release-workflow-docker)
+      - [Publishing a library (GitHub Packages)](#publishing-a-library-github-packages)
       - [Dependency Review](#dependency-review)
     - [Python (Poetry)](#python-poetry)
       - [Requirements](#requirements-2)
@@ -334,6 +335,38 @@ jobs:
 
 > [!note]
 > See [Docker Hub image visibility](#docker-hub-image-visibility) for image visibility caveats.
+
+#### Publishing a library (GitHub Packages)
+
+A repository that builds a Docker image can also publish a Gradle library from the same release run, to the Maven registry of its own GitHub repository. It is off by default; the Docker image, tag and GitHub release are produced as before.
+
+Set the inputs in the release workflow:
+
+```yml
+jobs:
+  release:
+    uses: nepalevov/ci/.github/workflows/java_release.yml@main
+    with:
+      promote: ${{ github.event_name == 'workflow_dispatch' && inputs.promote }}
+      publish-enabled: true
+    secrets: inherit
+```
+
+| Input             | Type    | Default | Description                                                                    |
+| ----------------- | ------- | ------- | ------------------------------------------------------------------------------ |
+| `publish-enabled` | boolean | `false` | Run `./gradlew publish` after the image is built and before the tag is created |
+
+The consumer repository **must**:
+
+- apply `maven-publish` in the module(s) to publish, with a repository for `https://maven.pkg.github.com/<owner>/<repository>` that reads its credentials from the `GPR_USERNAME` and `GPR_PASSWORD` environment variables (the workflow sets them to `github.actor` and `GITHUB_TOKEN`, so no secret is needed). The version is the one the workflow wrote into `build.gradle` (see [Branching](#branching)); the Gradle build may change it for the publication, for example to publish a `development` build as a `-SNAPSHOT`
+- keep the `maven-publish` plugin out of modules that must not be published: `./gradlew publish` runs in every module that has it
+
+How it behaves:
+
+- On the `development` branch the step always runs `./gradlew publish`: a `-SNAPSHOT` version can be uploaded again and again.
+- On other branches a release candidate or stable version cannot be uploaded twice (GitHub Packages answers `409 Conflict`). The step does not check for an existing version, so a rerun after a cancelled run (the tag is created after the step, so the same version is computed again) fails until the version is deleted from the package settings.
+- The step runs after the image build and scan and before the tag, so a failed scan publishes nothing and a tag implies a published library.
+- The packages show up as the repository's packages. Reading them, even public ones, takes a token with the `read:packages` scope.
 
 #### Dependency Review
 
